@@ -38,7 +38,7 @@ def _get_segments(
     return segments
 
 
-def _batch_similarity_search(
+def batch_similarity_search(
     bert: SentenceTransformer,
     seed_utterances: List[str],
     seed_encoding: np.ndarray,

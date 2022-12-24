@@ -236,3 +236,10 @@ class Orchestrator:
         if self.configs is None:
             return 0
         return len(self.configs)
+
+    @property
+    def list_micromodels(self):
+        """
+        Return the names of micromodels
+        """
+        return [get_model_name(config) for config in self.configs]
