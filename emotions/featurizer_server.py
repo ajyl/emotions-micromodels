@@ -37,3 +37,7 @@ def encode():
 @app.route("/ping", methods=["GET"])
 def ping():
     return {"ready": True}
+
+
+if __name__ == "__main__":
+    app.run()

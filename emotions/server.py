@@ -10,7 +10,8 @@ import time
 import requests
 import pandas as pd
 from nltk.tokenize import word_tokenize
-from dash import Dash, html, dcc, Input, Output, State
+from dash import Dash, html, dcc, Input, Output, State, dash_table
+import dash_bootstrap_components as dbc
 import plotly.express as px
 from interpret.glassbox.ebm.ebm import EBMExplanation
 
@@ -49,35 +50,111 @@ except RuntimeError:
 
 
 app = Dash(__name__)
-app.layout = html.Div(
-    children=[
-        html.H1(children="Welcome!"),
-        html.Div(
+
+app.layout = dbc.Container(
+    [
+        dbc.Row(
+            dbc.Col(
+                html.Div(
+                    children=[
+                        html.H1(children="Welcome!"),
+                        html.Div(
+                            children=[
+                                html.Div(
+                                    [
+                                        "Input Query:",
+                                        dcc.Input(
+                                            id="query",
+                                            value="I almost got into a car accident.",
+                                            type="text",
+                                        ),
+                                    ]
+                                ),
+                                html.Button("Run!", id="submit", n_clicks=0),
+                                html.Br(),
+                                html.Div(id="query-output"),
+                                dcc.Graph(id="results"),
+                            ]
+                        ),
+                    ]
+                )
+            )
+        ),
+        dbc.Row(
             [
-                "Input Query:",
-                dcc.Input(
-                    id="query",
-                    value="I almost got into a car accident.",
-                    type="text",
+                dbc.Col(
+                    html.Div(
+                        children=[
+                            html.Table(
+                                [
+                                    html.Thead(
+                                        html.Tr(
+                                            [
+                                                html.Th("Emotion"),
+                                                html.Th("Confidence Score"),
+                                            ]
+                                        )
+                                    ),
+                                    html.Tbody(
+                                        [
+                                            html.Tr(
+                                                [
+                                                    html.Td(id="emotion_1"),
+                                                    html.Td(
+                                                        id="emotion_score_1"
+                                                    ),
+                                                ]
+                                            ),
+                                            html.Tr(
+                                                [
+                                                    html.Td(id="emotion_2"),
+                                                    html.Td(
+                                                        id="emotion_score_2"
+                                                    ),
+                                                ]
+                                            ),
+                                            html.Tr(
+                                                [
+                                                    html.Td(id="emotion_3"),
+                                                    html.Td(
+                                                        id="emotion_score_3"
+                                                    ),
+                                                ]
+                                            ),
+                                        ]
+                                    ),
+                                ]
+                            ),
+                        ],
+                    ),
+                ),
+                dbc.Col(
+                    html.Div(
+                        children=[
+                            dcc.Graph(id="global_explanation"),
+                            html.Div(
+                                children=[
+                                    html.Div(
+                                        [
+                                            html.Pre(
+                                                id="hover-data",
+                                                style=styles["pre"],
+                                            )
+                                        ],
+                                        #className="three columns",
+                                    )
+                                ],
+                            ),
+                        ],
+                    ),
                 ),
             ]
         ),
-        html.Button("Run!", id="submit", n_clicks=0),
-        html.Br(),
-        dcc.Graph(id="results"),
-        html.Div(
-            children=[html.Pre(id="classifications")],
+        dbc.Row(
+            dbc.Col(
+                html.Div(children=[html.Pre(id="empathy")]),
+            )
         ),
-        dcc.Graph(id="global_explanation"),
-        html.Div(
-            children=[
-                html.Div(
-                    [html.Pre(id="hover-data", style=styles["pre"])],
-                    className="three columns",
-                )
-            ],
-        ),
-        html.Div(children=[html.Pre(id="empathy")]),
     ]
 )
 
@@ -97,7 +174,12 @@ def _get_color(mm_name):
     [
         Output(component_id="results", component_property="figure"),
         Output(component_id="global_explanation", component_property="figure"),
-        Output(component_id="classifications", component_property="children"),
+        Output(component_id="emotion_1", component_property="children"),
+        Output(component_id="emotion_score_1", component_property="children"),
+        Output(component_id="emotion_2", component_property="children"),
+        Output(component_id="emotion_score_2", component_property="children"),
+        Output(component_id="emotion_3", component_property="children"),
+        Output(component_id="emotion_score_3", component_property="children"),
         Output(component_id="empathy", component_property="children"),
     ],
     Input("submit", "n_clicks"),
@@ -111,11 +193,11 @@ def encode(n_clicks, query):
 
     # Classifications
     classifications = result["classifications"]
-    emotion_classification = list(
-        zip(
-            classifications["emotions"][0][0],
-            classifications["emotions"][0][1],
-        )
+    emotion_classification = pd.DataFrame(
+        {
+            "Emotion": classifications["emotions"][0][0][:3],
+            "Confidence Scores": classifications["emotions"][0][1][:3],
+        }
     )
 
     empathy = [
@@ -172,9 +254,11 @@ def encode(n_clicks, query):
         data.append(
             (
                 mm,
+                query,
                 max(mm_result["max_score"], 0),
                 mm_result["top_k_scores"][0][0],
                 mm_result["top_k_scores"][0][1],
+                mm_result["segment"],
                 _get_color(mm),
             )
         )
@@ -183,9 +267,11 @@ def encode(n_clicks, query):
         data=data,
         columns=[
             "mm_name",
+            "query",
             "score",
             "similar_segment",
             "similar_score",
+            "segment",
             "color",
         ],
     )
@@ -196,26 +282,35 @@ def encode(n_clicks, query):
         color="color",
         hover_name="mm_name",
         hover_data=["mm_name", "score", "similar_segment", "similar_score"],
-        custom_data=["similar_segment", "similar_score"],
-        title=query,
+        custom_data=["similar_segment", "similar_score", "segment", "query"],
+        #title=query,
     )
     fig.update_layout()
+
 
     return [
         fig,
         global_fig,
-        json.dumps(emotion_classification[:3]),
+        classifications["emotions"][0][0][0],
+        classifications["emotions"][0][1][0],
+        classifications["emotions"][0][0][1],
+        classifications["emotions"][0][1][1],
+        classifications["emotions"][0][0][2],
+        classifications["emotions"][0][1][2],
         json.dumps(empathy, indent=2),
     ]
 
 
 @app.callback(
-    Output("hover-data", "children"),
+    [
+        Output("query-output", "children"),
+        Output("hover-data", "children"),
+    ],
     Input("results", "hoverData"),
 )
 def display_hover_data(hoverData):
     if hoverData is None:
-        return
+        return (None, None)
 
     print(json.dumps(hoverData, indent=2))
     data = hoverData["points"][0]
@@ -224,8 +319,23 @@ def display_hover_data(hoverData):
         "score": data["value"],
         "similar_segment": data["customdata"][0],
         "similar_score": data["customdata"][1],
+        "segment": data["customdata"][2],
     }
-    return json.dumps(info, indent=2)
+
+    query = " ".join(word_tokenize(data["customdata"][3]))
+    segment = " ".join(word_tokenize(data["customdata"][2]))
+
+    segment_start_idx = query.index(segment)
+    segment_end_idx = segment_start_idx + len(segment)
+
+    annotated_query = []
+    for idx, char in enumerate(query):
+        if idx >= segment_start_idx and idx <= segment_end_idx:
+            annotated_query.append(html.Span(char, className="span-text"))
+        else:
+            annotated_query.append(char)
+    
+    return [annotated_query, json.dumps(info, indent=2)]
 
 
 def main():
