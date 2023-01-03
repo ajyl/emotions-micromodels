@@ -37,7 +37,6 @@ def load_ed_data(file_path):
     """
     Load Empathetic Dialogue data
     """
-
     data = defaultdict(list)
     with open(file_path, "r") as file_p:
         reader = csv.DictReader(file_p)

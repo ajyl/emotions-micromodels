@@ -9,6 +9,7 @@ import pickle
 from nltk import tokenize
 from tqdm import tqdm
 from interpret.glassbox import ExplainableBoostingClassifier
+from interpret import show
 
 from emotions.BertFeaturizer import BertFeaturizer
 from emotions.config import add_ed_emotions, EMP_CONFIGS, EMP_TASKS, EMP_MMS
@@ -254,6 +255,7 @@ class Encoder:
         ed_data = load_ed_data(filepath)
         labels = []
         featurized = None
+        emotions = []
         for emotion, utts in tqdm(ed_data.items()):
             bert_results = self.featurizer.run_bert(utts)
 
@@ -267,8 +269,9 @@ class Encoder:
                     featurized = np.vstack([featurized, scores])
 
             labels.extend([emotion] * len(utts))
+            emotions.append(emotion)
 
-        self.ed_model = ExplainableBoostingClassifier()
+        self.ed_model = ExplainableBoostingClassifier(feature_names=self.ed_mms)
         self.ed_model.fit(featurized, labels)
 
     def run_emotion_clf_queries(self, queries: List[str]):
@@ -456,9 +459,21 @@ def load_encoder():
 
 def main():
     """ Driver """
-
     encoder = load_encoder()
-    result = encoder.encode("I almost got into a car accident.")
+    #result = encoder.encode("well so I 've been working with the weight management clinic and I just when I found out that this was an opportunity I thought why not use this as another resource to help me lose weight")
+    #test_utterance = "well so I 've been working with the weight management clinic and I just when I found out that this was an opportunity I thought why not use this as another resource to help me lose weight"
+    test_utterance = "I feel so sad because I almost got in a car accident."
+    #encoder.encode(test_utterance)
+
+    bert_results = encoder.featurizer.run_bert([test_utterance])
+    results = bert_results[0]
+    emotion_scores = [
+        results["results"][mm]["max_score"] for mm in encoder.ed_mms
+    ]
+    emotion_scores = np.array(emotion_scores, ndmin=2)
+    x = encoder.ed_model.explain_local(emotion_scores)
+    show(x)
+
     breakpoint()
 
 
