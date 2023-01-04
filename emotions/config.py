@@ -7,12 +7,9 @@ import json
 
 EMP_TASKS = ["emotional_reactions", "explorations", "interpretations"]
 EMP_MMS = [
-    "empathy_emotional_reactions_1",
-    "empathy_emotional_reactions_2",
-    "empathy_explorations_1",
-    "empathy_explorations_2",
-    "empathy_interpretations_1",
-    "empathy_interpretations_2",
+    "empathy_emotional_reactions",
+    "empathy_explorations",
+    "empathy_interpretations",
 ]
 
 
@@ -123,48 +120,25 @@ MM_CONFIG = []
 EMP_CONFIGS = [
     # EMPATHY
     {
-        "name": "empathy_emotional_reactions_1",
+        "name": "empathy_emotional_reactions",
         "model_type": "bert_query",
         "model_path": os.path.join(
-            mm_model_dir, "empathy_emotional_reactions_1"
+            mm_model_dir, "empathy_emotional_reactions"
         ),
         "setup_args": {},
         "build": BUILD_EMPATHY_MM,
     },
     {
-        "name": "empathy_emotional_reactions_2",
+        "name": "empathy_explorations",
         "model_type": "bert_query",
-        "model_path": os.path.join(
-            mm_model_dir, "empathy_emotional_reactions_2"
-        ),
+        "model_path": os.path.join(mm_model_dir, "empathy_explorations"),
         "setup_args": {},
         "build": BUILD_EMPATHY_MM,
     },
     {
-        "name": "empathy_explorations_1",
+        "name": "empathy_interpretations",
         "model_type": "bert_query",
-        "model_path": os.path.join(mm_model_dir, "empathy_explorations_1"),
-        "setup_args": {},
-        "build": BUILD_EMPATHY_MM,
-    },
-    {
-        "name": "empathy_explorations_2",
-        "model_type": "bert_query",
-        "model_path": os.path.join(mm_model_dir, "empathy_explorations_2"),
-        "setup_args": {},
-        "build": BUILD_EMPATHY_MM,
-    },
-    {
-        "name": "empathy_interpretations_1",
-        "model_type": "bert_query",
-        "model_path": os.path.join(mm_model_dir, "empathy_interpretations_1"),
-        "setup_args": {},
-        "build": BUILD_EMPATHY_MM,
-    },
-    {
-        "name": "empathy_interpretations_2",
-        "model_type": "bert_query",
-        "model_path": os.path.join(mm_model_dir, "empathy_interpretations_2"),
+        "model_path": os.path.join(mm_model_dir, "empathy_interpretations"),
         "setup_args": {},
         "build": BUILD_EMPATHY_MM,
     },

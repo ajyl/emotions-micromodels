@@ -6,22 +6,28 @@ from typing import List
 import os
 import numpy as np
 import pickle
+import torch
 from nltk import tokenize
 from tqdm import tqdm
 from interpret.glassbox import ExplainableBoostingClassifier
 from interpret import show
+from transformers import AutoTokenizer, AutoModel
 
 from emotions.BertFeaturizer import BertFeaturizer
 from emotions.config import add_ed_emotions, EMP_CONFIGS, EMP_TASKS, EMP_MMS
 from emotions.data_utils import load_ed_data, load_emp_data, reformat_emp_data
 from emotions.seeds.custom_emotions import ED_SEEDS
 from emotions.seeds.miti_codes import MITI_SEEDS
+from emotions.cross_scorer_model import CrossScorerCrossEncoder
 
 
 MM_HOME = os.environ.get("MM_HOME")
 MODELS_DIR = os.path.join(MM_HOME, "emotions/models")
+DATA_DIR = os.path.join(MM_HOME, "emotions/data")
+EPITOME_0 = os.path.join(DATA_DIR, "epitome_0.json")
+EPITOME_1 = os.path.join(DATA_DIR, "epitome_1.json")
 
-EMP_THRESHOLD = 0.6
+PAIR_PRETRAIN_MODEL = "mental/mental-roberta-base"
 
 
 def _format_clf_results(probs, classes):
@@ -77,9 +83,6 @@ def _featurize_emp(featurizer, emp_data):
         _featurized = []
         for mm in EMP_MMS:
             _scores = [_result[mm]["max_score"] for _result in _results]
-            binary = [1 if x > EMP_THRESHOLD else 0 for x in _scores]
-            ratio = sum(binary) / len(_results)
-            _featurized.append(ratio)
             _featurized.append(max(_scores))
 
         if featurized is None:
@@ -111,18 +114,9 @@ def setup_emp_config(mm_data):
     """set up orchestrator for featurization"""
     mm_configs = EMP_CONFIGS
     all_rationales = {
-        "emotional_reactions": {
-            "1": [],
-            "2": [],
-        },
-        "interpretations": {
-            "1": [],
-            "2": [],
-        },
-        "explorations": {
-            "1": [],
-            "2": [],
-        },
+        "emotional_reactions": [],
+        "interpretations": [],
+        "explorations": [],
     }
     for instance in mm_data:
         for task in EMP_TASKS:
@@ -130,31 +124,20 @@ def setup_emp_config(mm_data):
             if level != "0":
                 rationales = instance[task]["rationales"].split("|")
                 rationales = [x for x in rationales if x != ""]
-                all_rationales[task][level].extend(rationales)
+                all_rationales[task].extend(rationales)
+
     for config in mm_configs:
         config["setup_args"]["infer_config"] = {
             "segment_config": {"window_size": 10, "step_size": 4}
         }
-        if config["name"] == "empathy_interpretations_1":
-            config["setup_args"]["seed"] = all_rationales["interpretations"][
-                "1"
-            ]
-        if config["name"] == "empathy_interpretations_2":
-            config["setup_args"]["seed"] = all_rationales["interpretations"][
-                "2"
-            ]
-        if config["name"] == "empathy_explorations_1":
-            config["setup_args"]["seed"] = all_rationales["explorations"]["1"]
-        if config["name"] == "empathy_explorations_2":
-            config["setup_args"]["seed"] = all_rationales["explorations"]["2"]
-        if config["name"] == "empathy_emotional_reactions_1":
+        if config["name"] == "empathy_interpretations":
+            config["setup_args"]["seed"] = all_rationales["interpretations"]
+        if config["name"] == "empathy_explorations":
+            config["setup_args"]["seed"] = all_rationales["explorations"]
+        if config["name"] == "empathy_emotional_reactions":
             config["setup_args"]["seed"] = all_rationales[
                 "emotional_reactions"
-            ]["1"]
-        if config["name"] == "empathy_emotional_reactions_2":
-            config["setup_args"]["seed"] = all_rationales[
-                "emotional_reactions"
-            ]["2"]
+            ]
     return mm_configs
 
 
@@ -162,14 +145,19 @@ class Encoder:
     def __init__(self, **kwargs):
         """Load micromodels for encoding convo"""
         self.mm_configs = []
+        self.device = kwargs.get("device", "cpu")
         self.ed_model = None
         self.emp_model_er = None
         self.emp_model_exp = None
         self.emp_model_int = None
+        self.roberta_tokenizer = None
+        self.pair = None
+        self.pair_tokenizer = None
+
         print("Adding Empathetic Dialogue Micromodels...")
         self._add_ed_mms()
         print("Adding Epitome Micromodels...")
-        self._add_epitome_mms()
+        self._add_epitome_mms(kwargs.get("emp_filepath", EPITOME_0))
         print("Adding MITI Micromodels...")
         self._add_miti_mms()
         print("Initializing Featurizer...")
@@ -179,6 +167,7 @@ class Encoder:
         emp_er_clf_path = kwargs.get("emp_er_classifier", None)
         emp_exp_clf_path = kwargs.get("emp_exp_classifier", None)
         emp_int_clf_path = kwargs.get("emp_int_classifier", None)
+        pair_path = kwargs.get("pair_path", None)
 
         if ed_clf_path is not None:
             self.ed_model = self.load_clf(ed_clf_path)
@@ -192,6 +181,10 @@ class Encoder:
         if emp_int_clf_path is not None:
             self.emp_model_int = self.load_clf(emp_int_clf_path)
 
+        if pair_path is not None:
+            print("Adding PAIR...")
+            self.pair, self.pair_tokenizer = self._init_pair(pair_path)
+
     def _init_featurizer(self):
         self.featurizer = BertFeaturizer(MM_HOME, self.mm_configs)
         self.mms = self.featurizer.list_micromodels
@@ -201,6 +194,21 @@ class Encoder:
             if mm.startswith("emotion_") or mm.startswith("custom_")
         ]
         self.emp_mms = [mm for mm in self.mms if mm.startswith("empathy_")]
+
+    def _init_pair(self, model_path):
+        """
+        Initialize tokenizer, PAIR models.
+        """
+        encoder = AutoModel.from_pretrained(
+            PAIR_PRETRAIN_MODEL, add_pooling_layer=False
+        )
+        tokenizer = AutoTokenizer.from_pretrained(PAIR_PRETRAIN_MODEL)
+        cross_scorer = CrossScorerCrossEncoder(encoder).to(self.device)
+
+        ckpt = torch.load(model_path, map_location=torch.device(self.device))
+        cross_scorer.load_state_dict(ckpt["model_state_dict"])
+        cross_scorer.eval()
+        return cross_scorer, tokenizer
 
     def _add_ed_mms(self):
         """Add micromodels for EmpatheticDialogue"""
@@ -242,9 +250,9 @@ class Encoder:
             }
             self.mm_configs.append(config)
 
-    def _add_epitome_mms(self):
+    def _add_epitome_mms(self, emp_filepath):
         """Add epitome micromodels"""
-        emp_data = load_emp_data()
+        emp_data = load_emp_data(emp_filepath)
         emp_config = setup_emp_config(emp_data)
         self.mm_configs = self.mm_configs + emp_config
 
@@ -271,7 +279,9 @@ class Encoder:
             labels.extend([emotion] * len(utts))
             emotions.append(emotion)
 
-        self.ed_model = ExplainableBoostingClassifier(feature_names=self.ed_mms)
+        self.ed_model = ExplainableBoostingClassifier(
+            feature_names=self.ed_mms
+        )
         self.ed_model.fit(featurized, labels)
 
     def run_emotion_clf_queries(self, queries: List[str]):
@@ -312,13 +322,19 @@ class Encoder:
         explorations_labels = [label[1] for label in labels]
         interpretations_labels = [label[2] for label in labels]
 
-        self.emp_model_er = ExplainableBoostingClassifier()
+        self.emp_model_er = ExplainableBoostingClassifier(
+            feature_names=EMP_MMS
+        )
         self.emp_model_er.fit(featurized, emotional_reactions_labels)
 
-        self.emp_model_exp = ExplainableBoostingClassifier()
+        self.emp_model_exp = ExplainableBoostingClassifier(
+            feature_names=EMP_MMS
+        )
         self.emp_model_exp.fit(featurized, explorations_labels)
 
-        self.emp_model_int = ExplainableBoostingClassifier()
+        self.emp_model_int = ExplainableBoostingClassifier(
+            feature_names=EMP_MMS
+        )
         self.emp_model_int.fit(featurized, interpretations_labels)
 
     def run_empathy_clf_queries(self, queries: List[str]):
@@ -353,6 +369,23 @@ class Encoder:
 
         return emotional_reactions, explorations, interpretations
 
+    def run_pair(self, prompt, response):
+        """
+        Run PAIR.
+        """
+        batch = self.pair_tokenizer(
+            prompt,
+            response,
+            padding="longest",
+            truncation=True,
+            return_tensors="pt",
+        ).to(self.device)
+        with torch.no_grad():
+            score = (
+                self.pair.score_forward(**batch).sigmoid().flatten().tolist()
+            )
+        return score
+
     def save_clf(self, model, model_path):
         """
         Save a EBM classifier
@@ -368,7 +401,7 @@ class Encoder:
             model = pickle.load(file_p)
         return model
 
-    def encode(self, utterance: str):
+    def encode_utterance(self, utterance: str):
         """
         Encode a single utterance.
         """
@@ -398,6 +431,15 @@ class Encoder:
             "local": pickle.dumps(self.ed_model.explain_local(emotion_scores)),
         }
         return results
+
+    def encode_turn(self, prompt, response):
+        """
+        Encode a single dialogue turn.
+        """
+        response_encoding = self.encode_utterance(response)
+        pair_encoding = self.run_pair(prompt, response)
+        breakpoint()
+        print("z")
 
     def encode_convo(self, convo):
         """
@@ -440,41 +482,70 @@ class Encoder:
         return bert_results
 
 
-def load_encoder():
+def load_encoder(
+    ed_path=None,
+    emp_er_path=None,
+    emp_exp_path=None,
+    emp_int_path=None,
+    pair_path=None,
+    device="cpu",
+):
     """
     Initialize and load encoder.
     """
-    ed_classifier = os.path.join(MODELS_DIR, "ed_classifier.pkl")
-    emp_er_classifier = os.path.join(MODELS_DIR, "emp_er.pkl")
-    emp_exp_classifier = os.path.join(MODELS_DIR, "emp_exp.pkl")
-    emp_int_classifier = os.path.join(MODELS_DIR, "emp_int.pkl")
     encoder = Encoder(
-        ed_classifier=ed_classifier,
-        emp_er_classifier=emp_er_classifier,
-        emp_exp_classifier=emp_exp_classifier,
-        emp_int_classifier=emp_int_classifier,
+        ed_classifier=ed_path,
+        emp_er_classifier=emp_er_path,
+        emp_exp_classifier=emp_exp_path,
+        emp_int_classifier=emp_int_path,
+        pair_path=pair_path,
+        device=device,
     )
+    # encoder.train_empathy_clfs(EPITOME_1)
+    # encoder.save_clf(encoder.emp_model_er, emp_er_classifier)
+    # encoder.save_clf(encoder.emp_model_exp, emp_exp_classifier)
+    # encoder.save_clf(encoder.emp_model_int, emp_int_classifier)
     return encoder
 
 
 def main():
     """ Driver """
-    encoder = load_encoder()
-    #result = encoder.encode("well so I 've been working with the weight management clinic and I just when I found out that this was an opportunity I thought why not use this as another resource to help me lose weight")
-    #test_utterance = "well so I 've been working with the weight management clinic and I just when I found out that this was an opportunity I thought why not use this as another resource to help me lose weight"
-    test_utterance = "I feel so sad because I almost got in a car accident."
-    #encoder.encode(test_utterance)
+    ed_classifier = os.path.join(MODELS_DIR, "ed_classifier.pkl")
+    emp_er_classifier = os.path.join(MODELS_DIR, "emp_er.pkl")
+    emp_exp_classifier = os.path.join(MODELS_DIR, "emp_exp.pkl")
+    emp_int_classifier = os.path.join(MODELS_DIR, "emp_int.pkl")
+    pair_path = os.path.join(MODELS_DIR, "pair.pth")
 
-    bert_results = encoder.featurizer.run_bert([test_utterance])
-    results = bert_results[0]
-    emotion_scores = [
-        results["results"][mm]["max_score"] for mm in encoder.ed_mms
-    ]
-    emotion_scores = np.array(emotion_scores, ndmin=2)
-    x = encoder.ed_model.explain_local(emotion_scores)
-    show(x)
+    encoder = load_encoder(
+        ed_path=ed_classifier,
+        emp_er_path=emp_er_classifier,
+        emp_exp_path=emp_exp_classifier,
+        emp_int_path=emp_int_classifier,
+        pair_path=pair_path,
+        device="cuda:0",
+    )
 
-    breakpoint()
+    prompt = "I almost got into a car accident."
+    response = "You almost got into a car accident."
+
+    testing = encoder.run_pair(prompt, response)
+    testing2 = encoder.encode_turn(prompt, response)
+
+    # result = encoder.encode("well so I 've been working with the weight management clinic and I just when I found out that this was an opportunity I thought why not use this as another resource to help me lose weight")
+    # test_utterance = "well so I 've been working with the weight management clinic and I just when I found out that this was an opportunity I thought why not use this as another resource to help me lose weight"
+    # test_utterance = "I feel so sad because I almost got in a car accident."
+    # encoder.encode(test_utterance)
+
+    # bert_results = encoder.featurizer.run_bert([test_utterance])
+    # results = bert_results[0]
+    # emotion_scores = [
+    #    results["results"][mm]["max_score"] for mm in encoder.ed_mms
+    # ]
+    # emotion_scores = np.array(emotion_scores, ndmin=2)
+    # x = encoder.ed_model.explain_local(emotion_scores)
+    # show(x)
+
+    # breakpoint()
 
 
 if __name__ == "__main__":
