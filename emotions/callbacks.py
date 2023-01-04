@@ -14,16 +14,53 @@ import plotly.express as px
 
 from constants import FEATURIZER_SERVER, MITI_THRESHOLD
 
+COLOR_SCHEME = px.colors.qualitative.Set2
 
-def _get_color(mm_name):
+
+def _get_mm_color(mm_name):
     """
     Get color for mm.
     """
     mm_prefixes = ["emotion_", "custom_", "empathy_", "miti_"]
     for idx, prefix in enumerate(mm_prefixes):
         if mm_name.startswith(prefix):
-            return idx
+            return COLOR_SCHEME[idx]
     raise ValueError("Unknown MM %s!" % mm_name)
+
+
+def entname(name):
+    return html.Span(
+        name,
+        style={
+            "font-size": "0.8em",
+            "font-weight": "bold",
+            "line-height": "1",
+            "border-radius": "0.35em",
+            "text-transform": "uppercase",
+            "vertical-align": "middle",
+            "margin-left": "0.5rem",
+            "margin-right": "0.5rem",
+        },
+    )
+
+
+def entbox(children, color):
+    return html.Mark(
+        children,
+        style={
+            "background": color,
+            "padding": "0.45em 0.6em",
+            "margin": "0 0.25em",
+            "line-height": "1",
+            "border-radius": "0.35em",
+        },
+    )
+
+
+def entity(text, entity_name, color):
+    assert isinstance(text, str)
+    text = [entname(entity_name)] + [text]
+    return entbox(text, color)
 
 
 def handle_hover(hover_data):
@@ -31,20 +68,33 @@ def handle_hover(hover_data):
     Handle hovering over micromodel vector.
     """
     data = hover_data["points"][0]
+    micromodel = data["label"]
     query = " ".join(word_tokenize(data["customdata"][3]))
     segment = " ".join(word_tokenize(data["customdata"][2]))
 
     segment_start_idx = query.index(segment)
     segment_end_idx = segment_start_idx + len(segment)
 
-    annotated_query = []
-    for idx, char in enumerate(query):
-        if segment_start_idx <= idx <= segment_end_idx:
-            annotated_query.append(
-                html.Span(char, style={"background-color": "#90EE90"})
+    annotated_query = (
+        [query[:segment_start_idx]]
+        + [
+            entity(
+                query[segment_start_idx:segment_end_idx],
+                micromodel,
+                _get_mm_color(micromodel),
             )
-        else:
-            annotated_query.append(char)
+        ]
+        + [query[segment_end_idx:]]
+    )
+    # for idx, char in enumerate(query):
+    #    if segment_start_idx <= idx <= segment_end_idx:
+    #        annotated_query.append(
+    #            html.Span(
+    #                char, style={"background-color": _get_mm_color(micromodel)}
+    #            )
+    #        )
+    #    else:
+    #        annotated_query.append(char)
 
     return [
         no_update,
@@ -288,14 +338,14 @@ def encode(
                 mm_result["top_k_scores"][0][0],
                 mm_result["top_k_scores"][0][1],
                 mm_result["segment"],
-                _get_color(mm),
+                _get_mm_color(mm),
             )
         )
 
     data = pd.DataFrame(
         data=data,
         columns=[
-            "mm_name",
+            "Micromodel",
             "query",
             "score",
             "similar_segment",
@@ -307,16 +357,17 @@ def encode(
     fig = px.bar(
         data_frame=data,
         x="score",
-        y="mm_name",
+        y="Micromodel",
         color="color",
-        hover_name="mm_name",
-        hover_data=["mm_name", "score", "similar_segment", "similar_score"],
+        hover_name="Micromodel",
+        hover_data=["Micromodel", "score", "similar_segment", "similar_score"],
         custom_data=["similar_segment", "similar_score", "segment", "query"],
-        # title=query,
         orientation="h",
         height=1200,
+        color_discrete_sequence=COLOR_SCHEME,
     )
     fig.update_coloraxes(showscale=False)
+    fig.layout.showlegend = False
     fig.update_layout()
 
     speaker = speaker[0].upper() + speaker[1:] + ":"
@@ -351,23 +402,45 @@ def encode(
         for _, _segment in custom_emotion_segments
     ]
 
-    annotated_utterance = []
-    for idx, char in enumerate(_query):
+    miti_idxs = sorted(miti_idxs, key=lambda x: x[1])
 
-        miti_spans = []
-        for miti_range in miti_idxs:
-            if idx >= miti_range[1] and idx <= miti_range[2]:
-                miti_spans.append(miti_range[0])
+    miti_idx = 0
 
-        if len(miti_spans) > 0:
+    annotated_utterance = _query
+    if len(miti_idxs) > 0:
+        annotated_utterance = []
+        for miti_idx in miti_idxs:
+            annotated_utterance.extend(_query[: miti_idx[1]])
             annotated_utterance.append(
-                html.Span(
-                    char,
-                    style={"background-color": "#90EE90", "border": "2px"},
+                entity(
+                    _query[miti_idx[1] : miti_idx[2]],
+                    miti_idx[0],
+                    _get_mm_color("miti_"),
                 )
             )
-        else:
-            annotated_utterance.append(char)
+        annotated_utterance.extend(_query[miti_idx[2] :])
+
+    # for idx, char in enumerate(_query):
+    #    curr_miti = d
+
+    #    annotated_
+
+    #    miti_spans = []
+    #    for miti_range in miti_idxs:
+    #        if idx >= miti_range[1] and idx <= miti_range[2]:
+    #            miti_spans.append(miti_range[0])
+
+    #    if len(miti_spans) > 0:
+    #        annotated_utterance.append(
+    #            html.Span(
+    #                char,
+    #                style={"background-color": "#90EE90", "border": "2px"},
+    #            )
+    #        )
+    #    else:
+    #        annotated_utterance.append(char)
+
+    # breakpoint()
 
     return [
         {"display": "block"},

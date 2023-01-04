@@ -6,7 +6,8 @@ from dash import html, dcc
 import dash_bootstrap_components as dbc
 
 from emotions.config import ED_EMOTIONS
-#from components import emotion_analysis
+
+#from spacy.displacy.render import DEFAULT_LABEL_COLORS
 
 
 def get_emotion_mms():
@@ -74,6 +75,41 @@ emotion_analysis = dbc.Card(
     )
 )
 
+empathy_analysis = dbc.Card(
+    [
+        html.Pre(id="empathy")
+        #html.Table(
+        #    [
+        #        html.Thead(
+        #            html.Tr(
+        #                [
+        #                    html.Th("Emotional Reaction"),
+        #                    html.Th("Interpretation"),
+        #                    html.Th("Exploration"),
+        #                ],
+        #            ),
+        #            style={"hidden": True},
+        #        ),
+        #        html.Tbody(
+        #            [
+        #                html.Tr(
+        #                    [
+        #                        html.Td(id="emotional_reaction"),
+        #                        html.Td(id="interpretation"),
+        #                        html.Td(id="exploration"),
+        #                    ]
+        #                ),
+        #            ]
+        #        ),
+        #    ],
+        #    style={"display": "none"},
+        #    id="empathy-table",
+        #)
+    ]
+)
+
+
+
 analysis = html.Div(
     [
         html.Br(),
@@ -83,7 +119,7 @@ analysis = html.Div(
         dcc.Graph(id="micromodel-results", style={"display": "none"}),
         dcc.Store(id="emotion-classification-storage"),
         emotion_analysis,
-        html.Pre(id="empathy"),
+        empathy_analysis,
     ],
     style={"display": "none"},
     id="analysis",
