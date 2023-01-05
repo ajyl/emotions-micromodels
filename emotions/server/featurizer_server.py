@@ -10,7 +10,7 @@ import numpy as np
 from tqdm import tqdm
 from flask import Flask, request
 from interpret.glassbox.ebm.ebm import EBMExplanation
-from emotions.featurizer import load_encoder
+from emotions.backend.featurizer import load_encoder
 
 
 MM_HOME = os.environ.get("MM_HOME")
@@ -19,6 +19,10 @@ ed_classifier = os.path.join(MODELS_DIR, "ed_classifier.pkl")
 emp_er_classifier = os.path.join(MODELS_DIR, "emp_er.pkl")
 emp_exp_classifier = os.path.join(MODELS_DIR, "emp_exp.pkl")
 emp_int_classifier = os.path.join(MODELS_DIR, "emp_int.pkl")
+epitome_er_classifier = os.path.join(MODELS_DIR, "EPITOME_ER.pth")
+epitome_exp_classifier = os.path.join(MODELS_DIR, "EPITOME_EXP.pth")
+epitome_int_classifier = os.path.join(MODELS_DIR, "EPITOME_INT.pth")
+
 pair_path = os.path.join(MODELS_DIR, "pair.pth")
 
 encoder = load_encoder(
@@ -26,6 +30,9 @@ encoder = load_encoder(
     emp_er_path=emp_er_classifier,
     emp_exp_path=emp_exp_classifier,
     emp_int_path=emp_int_classifier,
+    epitome_er_path=epitome_er_classifier,
+    epitome_exp_path=epitome_exp_classifier,
+    epitome_int_path=epitome_int_classifier,
     pair_path=pair_path,
     device="cuda:0",
 )

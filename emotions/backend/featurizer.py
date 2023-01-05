@@ -13,12 +13,23 @@ from interpret.glassbox import ExplainableBoostingClassifier
 from interpret import show
 from transformers import AutoTokenizer, AutoModel
 
-from emotions.BertFeaturizer import BertFeaturizer
-from emotions.config import add_ed_emotions, EMP_CONFIGS, EMP_TASKS, EMP_MMS
-from emotions.data_utils import load_ed_data, load_emp_data, reformat_emp_data
+from emotions.config import (
+    add_ed_emotions,
+    EMP_CONFIGS,
+    EMP_TASKS,
+    EMP_MMS,
+    COG_DISTS,
+)
+from emotions.backend.BertFeaturizer import BertFeaturizer
+from emotions.backend.data_utils import (
+    load_ed_data,
+    load_emp_data,
+    reformat_emp_data,
+)
+from emotions.backend.EPITOME.empathy_classifier import EmpathyClassifier
+from emotions.backend.PAIR.cross_scorer_model import CrossScorerCrossEncoder
 from emotions.seeds.custom_emotions import ED_SEEDS
 from emotions.seeds.miti_codes import MITI_SEEDS
-from emotions.cross_scorer_model import CrossScorerCrossEncoder
 
 
 MM_HOME = os.environ.get("MM_HOME")
@@ -150,16 +161,18 @@ class Encoder:
         self.emp_model_er = None
         self.emp_model_exp = None
         self.emp_model_int = None
-        self.roberta_tokenizer = None
         self.pair = None
         self.pair_tokenizer = None
+        self.epitome = None
 
         print("Adding Empathetic Dialogue Micromodels...")
         self._add_ed_mms()
         print("Adding Epitome Micromodels...")
-        self._add_epitome_mms(kwargs.get("emp_filepath", EPITOME_0))
+        self._add_empathy_mms(kwargs.get("emp_filepath", EPITOME_0))
         print("Adding MITI Micromodels...")
         self._add_miti_mms()
+        print("Adding Cognitive Distortion Micromodels...")
+        self._add_cog_dist_mms()
         print("Initializing Featurizer...")
         self._init_featurizer()
 
@@ -167,6 +180,11 @@ class Encoder:
         emp_er_clf_path = kwargs.get("emp_er_classifier", None)
         emp_exp_clf_path = kwargs.get("emp_exp_classifier", None)
         emp_int_clf_path = kwargs.get("emp_int_classifier", None)
+
+        epitome_er_clf_path = kwargs.get("epitome_er_classifier", None)
+        epitome_exp_clf_path = kwargs.get("epitome_exp_classifier", None)
+        epitome_int_clf_path = kwargs.get("epitome_int_classifier", None)
+
         pair_path = kwargs.get("pair_path", None)
 
         if ed_clf_path is not None:
@@ -181,6 +199,16 @@ class Encoder:
         if emp_int_clf_path is not None:
             self.emp_model_int = self.load_clf(emp_int_clf_path)
 
+        if (
+            epitome_er_clf_path is not None
+            and epitome_exp_clf_path is not None
+            and epitome_int_clf_path is not None
+        ):
+            print("Adding EPITOME...")
+            self._init_epitome(
+                epitome_er_clf_path, epitome_exp_clf_path, epitome_int_clf_path
+            )
+
         if pair_path is not None:
             print("Adding PAIR...")
             self.pair, self.pair_tokenizer = self._init_pair(pair_path)
@@ -194,6 +222,17 @@ class Encoder:
             if mm.startswith("emotion_") or mm.startswith("custom_")
         ]
         self.emp_mms = [mm for mm in self.mms if mm.startswith("empathy_")]
+
+    def _init_epitome(self, er_path, int_path, exp_path):
+        """
+        Initialize EPITOME.
+        """
+        self.epitome = EmpathyClassifier(
+            self.device,
+            ER_model_path=er_path,
+            IP_model_path=int_path,
+            EX_model_path=exp_path,
+        )
 
     def _init_pair(self, model_path):
         """
@@ -250,7 +289,29 @@ class Encoder:
             }
             self.mm_configs.append(config)
 
-    def _add_epitome_mms(self, emp_filepath):
+    def _add_cog_dist_mms(self):
+        """
+        Add cognitive distortions / PHQ-9 responses
+        """
+        for cog_dist, seed in COG_DISTS.items():
+            setup_args = {
+                "threshold": 0.75,
+                "infer_config": {
+                    "segment_config": {"window_size": 10, "step_size": 4}
+                },
+                "seed": seed,
+            }
+            config = {
+                "name": "cog_dist_%s" % cog_dist,
+                "model_type": "bert_query",
+                "setup_args": setup_args,
+                "model_path": os.path.join(
+                    MM_HOME, "models/cog_dist_%s" % cog_dist
+                ),
+            }
+            self.mm_configs.append(config)
+
+    def _add_empathy_mms(self, emp_filepath):
         """Add epitome micromodels"""
         emp_data = load_emp_data(emp_filepath)
         emp_config = setup_emp_config(emp_data)
@@ -369,6 +430,26 @@ class Encoder:
 
         return emotional_reactions, explorations, interpretations
 
+    def run_epitome(self, prompt, response):
+        """
+        Run EPITOME.
+        """
+        empathy = self.epitome.predict_empathy([prompt], [response])
+        return {
+            "epitome_er": {
+                "probabilities": empathy["er"]["probabilities"][0],
+                "predictions": empathy["er"]["predictions"][0],
+            },
+            "epitome_int": {
+                "probabilities": empathy["int"]["probabilities"][0],
+                "predictions": empathy["int"]["predictions"][0],
+            },
+            "epitome_exp": {
+                "probabilities": empathy["exp"]["probabilities"][0],
+                "predictions": empathy["exp"]["predictions"][0],
+            },
+        }
+
     def run_pair(self, prompt, response):
         """
         Run PAIR.
@@ -422,9 +503,7 @@ class Encoder:
         return {
             "emotion": {
                 "predictions": emotion_preds,
-                "explanations": {
-                    "global": self.ed_model.explain_global()
-                },
+                "explanations": {"global": self.ed_model.explain_global()},
             },
             "empathy": {
                 "empathy_emotional_reactions": emp_er,
@@ -440,12 +519,18 @@ class Encoder:
         """
         response_encoding = self.encode_utterance(utterance)
         if prev_utterance is not None:
-            response_encoding["pair"] = {
-                "score": self.run_pair(utterance, prev_utterance)
+            epitome_results = self.run_epitome(prev_utterance, utterance)
+
+            response_encoding["micromodels"]["pair"] = {
+                "max_score": self.run_pair(prev_utterance, utterance)[0]
             }
+            for epitome_type, _results in epitome_results.items():
+                response_encoding["micromodels"][epitome_type] = {
+                    "max_score": _results["probabilities"][0]
+                    + _results["probabilities"][1],
+                }
 
         return response_encoding
-
 
     def encode_convo(self, convo):
         """
@@ -493,6 +578,9 @@ def load_encoder(
     emp_er_path=None,
     emp_exp_path=None,
     emp_int_path=None,
+    epitome_er_path=None,
+    epitome_exp_path=None,
+    epitome_int_path=None,
     pair_path=None,
     device="cpu",
 ):
@@ -504,6 +592,9 @@ def load_encoder(
         emp_er_classifier=emp_er_path,
         emp_exp_classifier=emp_exp_path,
         emp_int_classifier=emp_int_path,
+        epitome_er_classifier=epitome_er_path,
+        epitome_exp_classifier=epitome_exp_path,
+        epitome_int_classifier=epitome_int_path,
         pair_path=pair_path,
         device=device,
     )
@@ -520,6 +611,9 @@ def main():
     emp_er_classifier = os.path.join(MODELS_DIR, "emp_er.pkl")
     emp_exp_classifier = os.path.join(MODELS_DIR, "emp_exp.pkl")
     emp_int_classifier = os.path.join(MODELS_DIR, "emp_int.pkl")
+    epitome_er_classifier = os.path.join(MODELS_DIR, "EPITOME_ER.pth")
+    epitome_exp_classifier = os.path.join(MODELS_DIR, "EPITOME_EXP.pth")
+    epitome_int_classifier = os.path.join(MODELS_DIR, "EPITOME_INT.pth")
     pair_path = os.path.join(MODELS_DIR, "pair.pth")
 
     encoder = load_encoder(
@@ -527,6 +621,9 @@ def main():
         emp_er_path=emp_er_classifier,
         emp_exp_path=emp_exp_classifier,
         emp_int_path=emp_int_classifier,
+        epitome_er_path=epitome_er_classifier,
+        epitome_exp_path=epitome_exp_classifier,
+        epitome_int_path=epitome_int_classifier,
         pair_path=pair_path,
         device="cuda:0",
     )

@@ -4,6 +4,17 @@ Micromodel Configurations
 
 import os
 import json
+from emotions.seeds import (
+    ANXIOUS,
+    APATHY,
+    DEPRESSED,
+    LABELING,
+    SCARED,
+    SELF_BLAME,
+    SUBSTANCE_ABUSE,
+    SUICIDAL,
+)
+
 
 EMP_TASKS = ["emotional_reactions", "explorations", "interpretations"]
 EMP_MMS = [
@@ -21,6 +32,8 @@ BUILD_ED_EMOTION_MMS = True
 
 INCLUDE_GO_EMOTIONS = False
 BUILD_GO_EMOTION_MMS = False
+
+BUILD_COG_DIST_MMS = True
 
 ED_EMOTIONS = [
     "afraid",
@@ -58,15 +71,14 @@ ED_EMOTIONS = [
 ]
 
 ED_EMOTIONS_EKMAN = [
-    "angry", # anger
-    "disgusted", # disgust
+    "angry",  # anger
+    "disgusted",  # disgust
     # fear
-    "joyful", # joy
+    "joyful",  # joy
     # neutral
-    "sad", # sadness
-    "surprised", # surprise
+    "sad",  # sadness
+    "surprised",  # surprise
 ]
-
 
 
 GO_EMOTIONS = [
@@ -98,6 +110,18 @@ GO_EMOTIONS = [
     "sadness",
     "surprise",
 ]
+
+
+COG_DISTS = {
+    "anxious": ANXIOUS,
+    "apathy": APATHY,
+    "depressed": DEPRESSED,
+    "labeling": LABELING,
+    "scared": SCARED,
+    "self_blame": SELF_BLAME,
+    "substance_abuse": SUBSTANCE_ABUSE,
+    "suicidal": SUICIDAL,
+}
 
 
 mm_base_path = os.environ.get("MM_HOME")
@@ -148,9 +172,7 @@ EMP_CONFIGS_MERGED = [
     {
         "name": "empathy_%s" % task,
         "model_type": "bert_query",
-        "model_path": os.path.join(
-            mm_model_dir, "empathy_%s" % task
-        ),
+        "model_path": os.path.join(mm_model_dir, "empathy_%s" % task),
         "setup_args": {
             "infer_config": {
                 "segment_config": {"window_size": 10, "step_size": 4},
@@ -177,9 +199,10 @@ def add_go_emotions(configs):
             "model_type": "bert_query",
             "setup_args": setup_args,
             "model_path": os.path.join(mm_model_dir, "go_%s" % emotion),
-            "build": BUILD_GO_EMOTION_MMS
+            "build": BUILD_GO_EMOTION_MMS,
         }
         configs.append(config)
+
 
 def add_ed_emotions(configs):
     """ Add emotion micromodels """
@@ -195,7 +218,29 @@ def add_ed_emotions(configs):
             "model_type": "bert_query",
             "setup_args": setup_args,
             "model_path": os.path.join(ed_seed_dir, "%s" % emotion),
-            "build": BUILD_ED_EMOTION_MMS
+            "build": BUILD_ED_EMOTION_MMS,
+        }
+        configs.append(config)
+
+
+def add_cog_dists(configs):
+    """
+    Add cognitive distortions / PHQ-9 responses
+    """
+    for cog_dist, seed in COG_DISTS.items():
+        setup_args = {
+            "threshold": 0.6,
+            "infer_config": {
+                "segment_config": {"window_size": 10, "step_size": 4}
+            },
+            "seed": seed,
+        }
+        config = {
+            "name": "cog_dist_%s" % cog_dist,
+            "model_type": "bert_query",
+            "setup_args": setup_args,
+            "model_path": os.path.join(mm_model_dir, "cog_dist_%s" % cog_dist),
+            "build": BUILD_COG_DIST_MMS,
         }
         configs.append(config)
 

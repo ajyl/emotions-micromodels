@@ -20,7 +20,7 @@ from emotions.constants import (
     EMOTION_THRESHOLD,
     EMPATHY_THRESHOLD,
 )
-from emotions.server.utils import get_mm_color, entity, COLOR_SCHEME
+from emotions.server.utils import get_mm_color, entity, COLOR_SCHEME, MM_TYPES
 from emotions.server.callbacks.annotate_utterance import (
     update_utterance_component,
     annotate_utterance,
@@ -186,6 +186,7 @@ def encode(
         json={"response": utterance, "prompt": prev_utterance},
     )
     response_obj = response.json()
+    breakpoint()
 
     # Emotions - Predictions
     emotion_classifications = response_obj["emotion"]["predictions"][0][0]
@@ -212,12 +213,15 @@ def encode(
         global_fig["layout"].pop("xaxis")
         global_fig["layout"].pop("yaxis")
 
-    # Empathy
+    # Empathy - MM
     empathy = [
         response_obj["empathy"]["empathy_emotional_reactions"],
         response_obj["empathy"]["empathy_explorations"],
         response_obj["empathy"]["empathy_interpretations"],
     ]
+
+    # Empathy - EPITOME
+    epitome = response_obj["epitome"]
 
     # MITI (PAIR)
     pair_results = response_obj.get("pair")
@@ -232,16 +236,16 @@ def encode(
 
     # Micromodels
     mms = list(response_obj["micromodels"].keys())
-    sorted_mms = (
-        sorted([mm for mm in mms if mm.startswith("emotion_")])
-        + sorted([mm for mm in mms if mm.startswith("custom_")])
-        + sorted([mm for mm in mms if mm.startswith("empathy_")])
-        + sorted([mm for mm in mms if mm.startswith("miti_")])
-    )
+    sorted_mms = []
+    for mm_type in MM_TYPES[::-1]:
+        sorted_mms.extend([
+            mm for mm in mms if mm.startswith(mm_type)
+        ])
 
     data = []
     for mm in sorted_mms:
         mm_result = response_obj["micromodels"][mm]
+        #if mm.startswith("epitome_") or mm.startswith("pair"):
         data.append(
             (
                 mm,
@@ -275,7 +279,7 @@ def encode(
         hover_data=["Micromodel", "score", "similar_segment", "similar_score"],
         custom_data=["similar_segment", "similar_score", "segment", "query"],
         orientation="h",
-        height=1200,
+        height=1500,
         color_discrete_sequence=COLOR_SCHEME,
     )
     fig.update_coloraxes(showscale=False)
