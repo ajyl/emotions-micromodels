@@ -4,10 +4,7 @@ Dash Components
 
 from dash import html, dcc
 import dash_bootstrap_components as dbc
-
 from emotions.config import ED_EMOTIONS
-
-#from spacy.displacy.render import DEFAULT_LABEL_COLORS
 
 
 def get_emotion_mms():
@@ -22,30 +19,32 @@ utterance_component = dbc.Card(
         dbc.CardHeader(
             dbc.Tabs(
                 [
-                    dbc.Tab(label="Overview", tab_id="utterance-tab-1"),
-                    dbc.Tab(label="Emotions", tab_id="utterance-tab-2"),
-                    dbc.Tab(label="MITI Codes", tab_id="utterance-tab-3"),
-                    dbc.Tab(label="Empathy", tab_id="utterance-tab-4"),
+                    dbc.Tab(label="Emotions", tab_id="utterance-tab-1"),
+                    dbc.Tab(label="MITI Codes", tab_id="utterance-tab-2"),
+                    dbc.Tab(label="Empathy", tab_id="utterance-tab-3"),
                 ],
                 id="utterance-tabs",
                 active_tab="utterance-tab-1",
             )
         ),
         dbc.CardBody(
-            [
-                html.H5(id="speaker"),
-                html.Br(),
-                html.Div(id="utterance")
-            ],
-            id="utterance-card"
-        )
+            [html.H5(id="speaker"), html.Br(), html.Div(id="utterance")],
+            id="utterance-card",
+        ),
+    ]
+)
+
+micromodel_component = dbc.Card(
+    [
+        dcc.Graph(id="micromodel-results", style={"display": "none"}),
+        dcc.Store(id="emotion-classification-storage"),
     ]
 )
 
 emotion_analysis = dbc.Card(
     dbc.CardBody(
         [
-            html.H4("Emotion Classification Results"),
+            html.H4("Emotion Analysis"),
             html.Table(
                 [
                     html.Thead(
@@ -103,8 +102,9 @@ emotion_analysis = dbc.Card(
 
 empathy_analysis = dbc.Card(
     [
-        html.Pre(id="empathy")
-        #html.Table(
+        html.H4("Empathy Analysis"),
+        html.Pre(id="empathy"),
+        # html.Table(
         #    [
         #        html.Thead(
         #            html.Tr(
@@ -130,23 +130,24 @@ empathy_analysis = dbc.Card(
         #    ],
         #    style={"display": "none"},
         #    id="empathy-table",
-        #)
+        # )
     ]
 )
 
 pair_analysis = dbc.Card(
     [
+        html.H4("MITI Analysis"),
         html.Pre(id="pair")
     ]
 )
 
 
-
 analysis = html.Div(
     [
         utterance_component,
-        dcc.Graph(id="micromodel-results", style={"display": "none"}),
-        dcc.Store(id="emotion-classification-storage"),
+        html.Br(),
+        micromodel_component,
+        html.Br(),
         emotion_analysis,
         empathy_analysis,
         pair_analysis,

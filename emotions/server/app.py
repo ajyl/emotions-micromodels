@@ -8,8 +8,8 @@ import requests
 from dash import Dash, html
 import dash_bootstrap_components as dbc
 from components import analysis, dialogue_dropdown, conversation
-from callbacks import encode
-from constants import FEATURIZER_SERVER
+from callbacks.encode import encode
+from emotions.constants import FEATURIZER_SERVER
 
 
 def init_featurizer_server(server_addr):
@@ -37,6 +37,7 @@ try:
     init_featurizer_server(FEATURIZER_SERVER)
 except RuntimeError:
     sys.exit()
+
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = dbc.Container(

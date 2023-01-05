@@ -9,31 +9,8 @@ import pickle
 import numpy as np
 from tqdm import tqdm
 from flask import Flask, request
-from emotions.featurizer import load_encoder
 from interpret.glassbox.ebm.ebm import EBMExplanation
-
-MI_DATA_DIR = "./data/HighLowQualityCounseling/json"
-
-
-def init_cache(data_dir=MI_DATA_DIR):
-    """
-    Initialize MI dialogue data.
-    """
-    print("Initializing cache...")
-    cache = {}
-    for filename in tqdm(os.listdir(data_dir)):
-        if not filename.endswith(".json"):
-            continue
-
-        with open(os.path.join(data_dir, filename)) as file_p:
-            data = json.load(file_p)
-
-        for utt_obj in data:
-            utterance = utt_obj["utterance"]
-            cache[utterance] = encoder.encode_utterance(utterance)
-
-    breakpoint()
-    return cache
+from emotions.featurizer import load_encoder
 
 
 MM_HOME = os.environ.get("MM_HOME")
@@ -54,7 +31,6 @@ encoder = load_encoder(
 )
 
 
-# cache = init_cache()
 cache = {}
 
 app = Flask(__name__)

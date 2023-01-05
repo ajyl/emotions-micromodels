@@ -427,9 +427,9 @@ class Encoder:
                 },
             },
             "empathy": {
-                "empathy_emotional_reactions": emp_er[0],
-                "empathy_explorations": emp_exp[0],
-                "empathy_interpretations": emp_int[0],
+                "empathy_emotional_reactions": emp_er,
+                "empathy_explorations": emp_exp,
+                "empathy_interpretations": emp_int,
             },
             "micromodels": results["results"],
         }
@@ -534,8 +534,7 @@ def main():
     prompt = "I almost got into a car accident."
     response = "You almost got into a car accident."
 
-    testing = encoder.run_pair(prompt, response)
-    testing2 = encoder.encode_turn(prompt, response)
+    testing2 = encoder.encode(prompt, response)
 
     # result = encoder.encode("well so I 've been working with the weight management clinic and I just when I found out that this was an opportunity I thought why not use this as another resource to help me lose weight")
     # test_utterance = "well so I 've been working with the weight management clinic and I just when I found out that this was an opportunity I thought why not use this as another resource to help me lose weight"

@@ -12,173 +12,21 @@ from dash import html, dcc, callback, Input, Output, State, ALL, ctx, no_update
 from dash.exceptions import PreventUpdate
 import plotly.express as px
 
-from constants import FEATURIZER_SERVER, MITI_THRESHOLD, THERAPIST, PATIENT
-
-COLOR_SCHEME = px.colors.qualitative.Set2
-
-
-def _get_mm_color(mm_name):
-    """
-    Get color for mm.
-    """
-    mm_prefixes = ["emotion", "custom", "empathy", "miti"]
-    for idx, prefix in enumerate(mm_prefixes):
-        if mm_name.startswith(prefix):
-            return COLOR_SCHEME[idx]
-    raise ValueError("Unknown MM %s!" % mm_name)
-
-
-def entname(name):
-    return html.Span(
-        name,
-        style={
-            "font-size": "0.8em",
-            "font-weight": "bold",
-            "line-height": "1",
-            "border-radius": "0.35em",
-            "text-transform": "uppercase",
-            "vertical-align": "middle",
-            "margin-left": "0.5rem",
-            "margin-right": "0.5rem",
-        },
-    )
-
-
-def entbox(children, color):
-    return html.Mark(
-        children,
-        style={
-            "background": color,
-            "padding": "0.45em 0.6em",
-            "margin": "0 0.25em",
-            "line-height": "1",
-            "border-radius": "0.35em",
-        },
-    )
-
-
-def entity(text, entity_name, color):
-    assert isinstance(text, str)
-    text = [entname(entity_name)] + [text]
-    return entbox(text, color)
-
-
-def annotate_utterance(annotation_obj, annotation_type):
-    """
-    Return an annotated utterance based on :annotation_obj:.
-    """
-    utterance = annotation_obj["utterance"]
-    annotation_idxs = annotation_obj[annotation_type]
-    annotated_utterance = utterance
-    if len(annotation_idxs) > 0:
-        annotated_utterance = []
-        last_idx = 0
-        for idx_obj in annotation_idxs:
-            # idx_obj[0]: span label
-            # idx_obj[1]: span start idx
-            # idx_obj[2]: span end idx
-            # idx_obj[3]: span score
-            annotated_utterance.extend(utterance[last_idx: idx_obj[1]])
-            annotated_utterance.append(
-                entity(
-                    utterance[idx_obj[1] : idx_obj[2]],
-                    idx_obj[0],
-                    _get_mm_color(annotation_type),
-                )
-            )
-            last_idx = idx_obj[2]
-        annotated_utterance.extend(utterance[last_idx:])
-    return annotated_utterance
-
-
-def update_annotate_utterance(annotation_obj, tab_id):
-    """
-    Update utterance annotation.
-    """
-    annotation_type = {
-        "utterance-tab-1": "miti",
-        "utterance-tab-2": "custom_emotions",
-        "utterance-tab-3": "miti",
-        "utterance-tab-4": "empathy",
-    }[tab_id]
-
-    return [
-        no_update,
-        no_update,
-        annotate_utterance(annotation_obj, annotation_type),
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-    ]
-
-
-def handle_hover(hover_data):
-    """
-    Handle hovering over micromodel vector.
-    """
-    data = hover_data["points"][0]
-    micromodel = data["label"]
-    query = " ".join(word_tokenize(data["customdata"][3]))
-    segment = " ".join(word_tokenize(data["customdata"][2]))
-
-    segment_start_idx = query.index(segment)
-    segment_end_idx = segment_start_idx + len(segment)
-
-    annotated_query = (
-        [query[:segment_start_idx]]
-        + [
-            entity(
-                query[segment_start_idx:segment_end_idx],
-                micromodel,
-                _get_mm_color(micromodel),
-            )
-        ]
-        + [query[segment_end_idx:]]
-    )
-    # for idx, char in enumerate(query):
-    #    if segment_start_idx <= idx <= segment_end_idx:
-    #        annotated_query.append(
-    #            html.Span(
-    #                char, style={"background-color": _get_mm_color(micromodel)}
-    #            )
-    #        )
-    #    else:
-    #        annotated_query.append(char)
-
-    return [
-        no_update,
-        no_update,
-        annotated_query,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-    ]
+from emotions.constants import (
+    FEATURIZER_SERVER,
+    THERAPIST,
+    PATIENT,
+    MITI_THRESHOLD,
+    EMOTION_THRESHOLD,
+    EMPATHY_THRESHOLD,
+)
+from emotions.server.utils import get_mm_color, entity, COLOR_SCHEME
+from emotions.server.callbacks.annotate_utterance import (
+    update_utterance_component,
+    annotate_utterance,
+    get_annotation_spans,
+)
+from emotions.server.callbacks.hover import handle_hover
 
 
 def update_global_exp(
@@ -213,6 +61,7 @@ def update_global_exp(
         no_update,
         no_update,
         no_update,
+        no_update,
         global_fig,
         no_update,
         no_update,
@@ -235,6 +84,7 @@ def update_global_exp(
         Output("speaker", "children"),
         Output("utterance", "children"),
         Output("annotated-utterance-storage", "data"),
+        Output("utterance-tabs", "active_tab"),
         Output("micromodel-results", "figure"),
         Output("micromodel-results", "style"),
         Output("global-explanation", "figure"),
@@ -296,6 +146,7 @@ def encode(
             no_update,
             no_update,
             no_update,
+            no_update,
         ]
 
     triggered_id = ctx.triggered_id
@@ -308,7 +159,7 @@ def encode(
         return handle_hover(hover_data)
 
     if triggered_id == "utterance-tabs":
-        return update_annotate_utterance(
+        return update_utterance_component(
             annotated_utterance_storage, utterance_tab
         )
 
@@ -368,23 +219,7 @@ def encode(
         response_obj["empathy"]["empathy_interpretations"],
     ]
 
-    # MITI
-    miti_results = {
-        x: y
-        for x, y in response_obj["micromodels"].items()
-        if x.startswith("miti_")
-    }
-    _miti = sorted(
-        [
-            (x, y["max_score"])
-            for x, y in miti_results.items()
-            if y["max_score"] >= MITI_THRESHOLD
-        ],
-        key=lambda x: x[1],
-        reverse=True,
-    )
-
-    # MITI - PAIR
+    # MITI (PAIR)
     pair_results = response_obj.get("pair")
     if pair_results:
         score = pair_results["score"][0]
@@ -415,7 +250,7 @@ def encode(
                 mm_result["top_k_scores"][0][0],
                 mm_result["top_k_scores"][0][1],
                 mm_result["segment"],
-                _get_mm_color(mm),
+                get_mm_color(mm),
             )
         )
 
@@ -449,86 +284,29 @@ def encode(
 
     speaker = speaker[0].upper() + speaker[1:] + ":"
 
-    miti_segments = [
-        (
-            miti_code[0],
-            " ".join(
-                word_tokenize(
-                    response_obj["micromodels"][miti_code[0]]["segment"]
-                )
-            ),
-        )
-        for miti_code in _miti
-    ]
-
-    custom_emotion_segments = [
-        (x, " ".join(word_tokenize(response_obj["micromodels"][x]["segment"])))
-        for x in sorted_mms
-        if x.startswith("custom_")
-    ]
-
-    _query = " ".join(word_tokenize(utterance))
-    miti_idxs = [
-        (
-            miti_code,
-            _query.index(_segment),
-            _query.index(_segment) + len(_segment),
-        )
-        for miti_code, _segment in miti_segments
-    ]
-    miti_idxs = sorted(miti_idxs, key=lambda x: x[1])
-
-    custom_emotion_idxs = [
-        (
-            emotion.replace("custom_", ""),
-            _query.index(_segment),
-            _query.index(_segment) + len(_segment),
-            response_obj["micromodels"][emotion]["max_score"],
-        )
-        for emotion, _segment in custom_emotion_segments
-    ]
-    custom_emotion_idxs_2 = sorted(custom_emotion_idxs, key=lambda x: x[1])
-    custom_emotion_idxs_3 = []
-
-    prev = custom_emotion_idxs_2[0]
-    for idx_obj in custom_emotion_idxs_2[1:]:
-        curr_min = prev[1]
-        curr_max = prev[2]
-        curr_score = prev[3]
-
-        new_min = idx_obj[1]
-        new_max = idx_obj[2]
-        new_score = idx_obj[3]
-
-        # Overlap
-        if curr_min <= new_min <= curr_max:
-            if new_score > curr_score:
-                prev = idx_obj
-
-        # No Overlap
-        elif new_min > curr_max:
-            custom_emotion_idxs_3.append(prev)
-            prev = idx_obj
-
-        else:
-            breakpoint()
-
-    if prev not in custom_emotion_idxs_3:
-        custom_emotion_idxs_3.append(prev)
-
+    utterance = " ".join(word_tokenize(utterance))
     utterance_annotation_obj = {
-        "utterance": _query,
-        "miti": miti_idxs,
-        "custom_emotions": custom_emotion_idxs_3,
+        "utterance": utterance,
+        "miti": get_annotation_spans(
+            utterance, response_obj, "miti_", MITI_THRESHOLD
+        ),
+        "emotions": get_annotation_spans(
+            utterance, response_obj, "custom_", EMOTION_THRESHOLD
+        ),
+        "empathy": get_annotation_spans(
+            utterance, response_obj, "empathy_", EMPATHY_THRESHOLD
+        ),
     }
-    # TODO: Update second argument.
-    annotated_utterance = annotate_utterance(utterance_annotation_obj, "miti")
+    annotated_utterance = annotate_utterance(
+        utterance_annotation_obj, "emotions"
+    )
 
     return [
         {"display": "block"},
         speaker,
         annotated_utterance,
         utterance_annotation_obj,
+        "utterance-tab-1",
         fig,
         {"display": "block"},
         global_fig,
