@@ -7,6 +7,7 @@ import json
 from dash import html, dcc, callback, Input, Output
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
+from emotions.constants import THERAPIST, PATIENT
 
 
 MM_HOME = os.environ.get("MM_HOME")
@@ -48,14 +49,14 @@ def textbox(text, box, idx):
         # "border-radius": "6px",
     }
 
-    if box == "patient":
+    if box == PATIENT:
         style["margin-left"] = "auto"
         style["margin-right"] = 0
 
         color = "primary"
         inverse = True
 
-    elif box == "therapist":
+    elif box == THERAPIST:
         style["margin-left"] = 0
         style["margin-right"] = "auto"
 

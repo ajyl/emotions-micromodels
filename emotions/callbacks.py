@@ -12,7 +12,7 @@ from dash import html, dcc, callback, Input, Output, State, ALL, ctx, no_update
 from dash.exceptions import PreventUpdate
 import plotly.express as px
 
-from constants import FEATURIZER_SERVER, MITI_THRESHOLD
+from constants import FEATURIZER_SERVER, MITI_THRESHOLD, THERAPIST, PATIENT
 
 COLOR_SCHEME = px.colors.qualitative.Set2
 
@@ -21,7 +21,7 @@ def _get_mm_color(mm_name):
     """
     Get color for mm.
     """
-    mm_prefixes = ["emotion_", "custom_", "empathy_", "miti_"]
+    mm_prefixes = ["emotion", "custom", "empathy", "miti"]
     for idx, prefix in enumerate(mm_prefixes):
         if mm_name.startswith(prefix):
             return COLOR_SCHEME[idx]
@@ -61,6 +61,68 @@ def entity(text, entity_name, color):
     assert isinstance(text, str)
     text = [entname(entity_name)] + [text]
     return entbox(text, color)
+
+
+def annotate_utterance(annotation_obj, annotation_type):
+    """
+    Return an annotated utterance based on :annotation_obj:.
+    """
+    utterance = annotation_obj["utterance"]
+    annotation_idxs = annotation_obj[annotation_type]
+    annotated_utterance = utterance
+    if len(annotation_idxs) > 0:
+        annotated_utterance = []
+        last_idx = 0
+        for idx_obj in annotation_idxs:
+            # idx_obj[0]: span label
+            # idx_obj[1]: span start idx
+            # idx_obj[2]: span end idx
+            # idx_obj[3]: span score
+            annotated_utterance.extend(utterance[last_idx: idx_obj[1]])
+            annotated_utterance.append(
+                entity(
+                    utterance[idx_obj[1] : idx_obj[2]],
+                    idx_obj[0],
+                    _get_mm_color(annotation_type),
+                )
+            )
+            last_idx = idx_obj[2]
+        annotated_utterance.extend(utterance[last_idx:])
+    return annotated_utterance
+
+
+def update_annotate_utterance(annotation_obj, tab_id):
+    """
+    Update utterance annotation.
+    """
+    annotation_type = {
+        "utterance-tab-1": "miti",
+        "utterance-tab-2": "custom_emotions",
+        "utterance-tab-3": "miti",
+        "utterance-tab-4": "empathy",
+    }[tab_id]
+
+    return [
+        no_update,
+        no_update,
+        annotate_utterance(annotation_obj, annotation_type),
+        no_update,
+        no_update,
+        no_update,
+        no_update,
+        no_update,
+        no_update,
+        no_update,
+        no_update,
+        no_update,
+        no_update,
+        no_update,
+        no_update,
+        no_update,
+        no_update,
+        no_update,
+        no_update,
+    ]
 
 
 def handle_hover(hover_data):
@@ -114,6 +176,8 @@ def handle_hover(hover_data):
         no_update,
         no_update,
         no_update,
+        no_update,
+        no_update,
     ]
 
 
@@ -148,7 +212,9 @@ def update_global_exp(
         no_update,
         no_update,
         no_update,
+        no_update,
         global_fig,
+        no_update,
         no_update,
         no_update,
         no_update,
@@ -168,6 +234,7 @@ def update_global_exp(
         Output("analysis", "style"),
         Output("speaker", "children"),
         Output("utterance", "children"),
+        Output("annotated-utterance-storage", "data"),
         Output("micromodel-results", "figure"),
         Output("micromodel-results", "style"),
         Output("global-explanation", "figure"),
@@ -182,6 +249,7 @@ def update_global_exp(
         Output("emotion_score_3", "children"),
         Output("emotion-classification-table", "style"),
         Output("empathy", "children"),
+        Output("pair", "children"),
     ],
     [
         Input({"type": "dialogue-click", "index": ALL}, "n_clicks"),
@@ -189,6 +257,8 @@ def update_global_exp(
         Input("global-explanation-feature-dropdown", "value"),
         Input("global-explanation-storage", "data"),
         Input("emotion-classification-storage", "data"),
+        Input("utterance-tabs", "active_tab"),
+        Input("annotated-utterance-storage", "data"),
     ],
     [
         State({"type": "dialogue-click", "index": ALL}, "value"),
@@ -200,11 +270,11 @@ def encode(
     explanation_dropdown,
     explanation_storage,
     emotion_classification_storage,
+    utterance_tab,
+    annotated_utterance_storage,
     utterances,
 ):
 
-    print("Explanation_dropdown")
-    print(explanation_dropdown)
     if sum(n_clicks) == 0:
         return [
             {"display": "none"},
@@ -224,20 +294,23 @@ def encode(
             no_update,
             no_update,
             no_update,
+            no_update,
+            no_update,
         ]
 
-    triggered_inputs = ctx.triggered
-    hovered = any(
-        x.get("prop_id") == "micromodel-results.hoverData"
-        for x in triggered_inputs
-    )
-    if hovered:
-        return handle_hover(hover_data)
+    triggered_id = ctx.triggered_id
+    print(triggered_id)
 
-    if ctx.triggered_id is None:
+    if triggered_id is None:
         raise PreventUpdate
 
-    triggered_id = ctx.triggered_id
+    if triggered_id == "micromodel-results":
+        return handle_hover(hover_data)
+
+    if triggered_id == "utterance-tabs":
+        return update_annotate_utterance(
+            annotated_utterance_storage, utterance_tab
+        )
 
     # TODO: Is there a way to avoid another network call
     # for this case?
@@ -251,25 +324,24 @@ def encode(
     idx = ctx.triggered_id["index"]
     utterance_obj = utterances[idx]
     utterance = utterance_obj["utterance"]
-
     speaker = utterance_obj["speaker"]
+
+    prev_utterance = None
+    if speaker == THERAPIST and idx > 0:
+        prev_utterance = utterances[idx - 1]["utterance"]
+
     response = requests.post(
-        FEATURIZER_SERVER + "/encode", json={"query": utterance}
+        FEATURIZER_SERVER + "/encode",
+        json={"response": utterance, "prompt": prev_utterance},
     )
-    result = response.json()
+    response_obj = response.json()
 
-    # Classifications
-    classifications = result["classifications"]
-    emotion_classifications = classifications["emotions"][0][0]
+    # Emotions - Predictions
+    emotion_classifications = response_obj["emotion"]["predictions"][0][0]
+    emotion_scores = response_obj["emotion"]["predictions"][0][1]
 
-    empathy = [
-        classifications["empathy_emotional_reactions"],
-        classifications["empathy_explorations"],
-        classifications["empathy_interpretations"],
-    ]
-
-    # Explanations
-    explanations = result["explanations"]
+    # Emotions - Explanations
+    explanations = response_obj["emotion"]["explanations"]
     global_exp = pickle.loads(base64.b64decode(explanations["global"]))
     visual_idx = None
     if explanation_dropdown in global_exp.feature_names:
@@ -289,9 +361,18 @@ def encode(
         global_fig["layout"].pop("xaxis")
         global_fig["layout"].pop("yaxis")
 
+    # Empathy
+    empathy = [
+        response_obj["empathy"]["empathy_emotional_reactions"],
+        response_obj["empathy"]["empathy_explorations"],
+        response_obj["empathy"]["empathy_interpretations"],
+    ]
+
     # MITI
     miti_results = {
-        x: y for x, y in result["results"].items() if x.startswith("miti_")
+        x: y
+        for x, y in response_obj["micromodels"].items()
+        if x.startswith("miti_")
     }
     _miti = sorted(
         [
@@ -302,24 +383,20 @@ def encode(
         key=lambda x: x[1],
         reverse=True,
     )
-    segments = [
-        (miti_code[0], result["results"][miti_code[0]]["segment"])
-        for miti_code in _miti
-    ]
-    # TODO
-    # if len(_miti) > 0:
-    #    utterance = " ".join(word_tokenize(utterance_obj["utterance"]))
-    #    for _miti_code, _segment in segments:
-    #        _idx = utterance.index(_segment)
-    #        utterance = (
-    #            utterance[:_idx]
-    #            + "[[ %s %s ]]"
-    #            % (_miti_code.upper().replace("_", "-"), _segment)
-    #            + utterance[_idx + len(_segment) :]
-    #        )
+
+    # MITI - PAIR
+    pair_results = response_obj.get("pair")
+    if pair_results:
+        score = pair_results["score"][0]
+        pair_pred = "No Reflection"
+        if score >= 0.3:
+            pair_pred = "Simple Reflection"
+        if score >= 0.7:
+            pair_pred = "Complex Reflection"
+        pair_results = {"prediction": pair_pred, "score": score}
 
     # Micromodels
-    mms = list(result["results"].keys())
+    mms = list(response_obj["micromodels"].keys())
     sorted_mms = (
         sorted([mm for mm in mms if mm.startswith("emotion_")])
         + sorted([mm for mm in mms if mm.startswith("custom_")])
@@ -329,7 +406,7 @@ def encode(
 
     data = []
     for mm in sorted_mms:
-        mm_result = result["results"][mm]
+        mm_result = response_obj["micromodels"][mm]
         data.append(
             (
                 mm,
@@ -376,14 +453,16 @@ def encode(
         (
             miti_code[0],
             " ".join(
-                word_tokenize(result["results"][miti_code[0]]["segment"])
+                word_tokenize(
+                    response_obj["micromodels"][miti_code[0]]["segment"]
+                )
             ),
         )
         for miti_code in _miti
     ]
 
     custom_emotion_segments = [
-        (x, " ".join(word_tokenize(result["results"][x]["segment"])))
+        (x, " ".join(word_tokenize(response_obj["micromodels"][x]["segment"])))
         for x in sorted_mms
         if x.startswith("custom_")
     ]
@@ -397,67 +476,72 @@ def encode(
         )
         for miti_code, _segment in miti_segments
     ]
-    custom_emotion_idxs = [
-        (_query.index(_segment), _query.index(_segment) + len(_segment))
-        for _, _segment in custom_emotion_segments
-    ]
-
     miti_idxs = sorted(miti_idxs, key=lambda x: x[1])
 
-    miti_idx = 0
+    custom_emotion_idxs = [
+        (
+            emotion.replace("custom_", ""),
+            _query.index(_segment),
+            _query.index(_segment) + len(_segment),
+            response_obj["micromodels"][emotion]["max_score"],
+        )
+        for emotion, _segment in custom_emotion_segments
+    ]
+    custom_emotion_idxs_2 = sorted(custom_emotion_idxs, key=lambda x: x[1])
+    custom_emotion_idxs_3 = []
 
-    annotated_utterance = _query
-    if len(miti_idxs) > 0:
-        annotated_utterance = []
-        for miti_idx in miti_idxs:
-            annotated_utterance.extend(_query[: miti_idx[1]])
-            annotated_utterance.append(
-                entity(
-                    _query[miti_idx[1] : miti_idx[2]],
-                    miti_idx[0],
-                    _get_mm_color("miti_"),
-                )
-            )
-        annotated_utterance.extend(_query[miti_idx[2] :])
+    prev = custom_emotion_idxs_2[0]
+    for idx_obj in custom_emotion_idxs_2[1:]:
+        curr_min = prev[1]
+        curr_max = prev[2]
+        curr_score = prev[3]
 
-    # for idx, char in enumerate(_query):
-    #    curr_miti = d
+        new_min = idx_obj[1]
+        new_max = idx_obj[2]
+        new_score = idx_obj[3]
 
-    #    annotated_
+        # Overlap
+        if curr_min <= new_min <= curr_max:
+            if new_score > curr_score:
+                prev = idx_obj
 
-    #    miti_spans = []
-    #    for miti_range in miti_idxs:
-    #        if idx >= miti_range[1] and idx <= miti_range[2]:
-    #            miti_spans.append(miti_range[0])
+        # No Overlap
+        elif new_min > curr_max:
+            custom_emotion_idxs_3.append(prev)
+            prev = idx_obj
 
-    #    if len(miti_spans) > 0:
-    #        annotated_utterance.append(
-    #            html.Span(
-    #                char,
-    #                style={"background-color": "#90EE90", "border": "2px"},
-    #            )
-    #        )
-    #    else:
-    #        annotated_utterance.append(char)
+        else:
+            breakpoint()
 
-    # breakpoint()
+    if prev not in custom_emotion_idxs_3:
+        custom_emotion_idxs_3.append(prev)
+
+    utterance_annotation_obj = {
+        "utterance": _query,
+        "miti": miti_idxs,
+        "custom_emotions": custom_emotion_idxs_3,
+    }
+    # TODO: Update second argument.
+    annotated_utterance = annotate_utterance(utterance_annotation_obj, "miti")
 
     return [
         {"display": "block"},
         speaker,
         annotated_utterance,
+        utterance_annotation_obj,
         fig,
         {"display": "block"},
         global_fig,
         {"display": "block"},
         explanations["global"],
-        classifications["emotions"][0][0],
-        classifications["emotions"][0][0][0],
-        classifications["emotions"][0][1][0],
-        classifications["emotions"][0][0][1],
-        classifications["emotions"][0][1][1],
-        classifications["emotions"][0][0][2],
-        classifications["emotions"][0][1][2],
+        emotion_classifications,
+        emotion_classifications[0],
+        emotion_scores[0],
+        emotion_classifications[1],
+        emotion_scores[1],
+        emotion_classifications[2],
+        emotion_scores[2],
         {"display": "block"},
         json.dumps(empathy, indent=2),
+        json.dumps(pair_results, indent=2),
     ]

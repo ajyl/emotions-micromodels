@@ -419,27 +419,33 @@ class Encoder:
         )
 
         emotion_preds = self.run_emotion_clf_features(emotion_scores)
-        results["classifications"] = {
-            "emotions": self.run_emotion_clf_features(emotion_scores),
-            "empathy_emotional_reactions": emp_er[0],
-            "empathy_explorations": emp_exp[0],
-            "empathy_interpretations": emp_int[0],
+        return {
+            "emotion": {
+                "predictions": emotion_preds,
+                "explanations": {
+                    "global": self.ed_model.explain_global()
+                },
+            },
+            "empathy": {
+                "empathy_emotional_reactions": emp_er[0],
+                "empathy_explorations": emp_exp[0],
+                "empathy_interpretations": emp_int[0],
+            },
+            "micromodels": results["results"],
         }
 
-        results["explanations"] = {
-            "global": pickle.dumps(self.ed_model.explain_global()),
-            "local": pickle.dumps(self.ed_model.explain_local(emotion_scores)),
-        }
-        return results
-
-    def encode_turn(self, prompt, response):
+    def encode(self, utterance, prev_utterance=None):
         """
         Encode a single dialogue turn.
         """
-        response_encoding = self.encode_utterance(response)
-        pair_encoding = self.run_pair(prompt, response)
-        breakpoint()
-        print("z")
+        response_encoding = self.encode_utterance(utterance)
+        if prev_utterance is not None:
+            response_encoding["pair"] = {
+                "score": self.run_pair(utterance, prev_utterance)
+            }
+
+        return response_encoding
+
 
     def encode_convo(self, convo):
         """

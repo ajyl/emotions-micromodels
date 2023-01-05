@@ -16,6 +16,32 @@ def get_emotion_mms():
     ]
 
 
+utterance_component = dbc.Card(
+    [
+        dcc.Store(id="annotated-utterance-storage"),
+        dbc.CardHeader(
+            dbc.Tabs(
+                [
+                    dbc.Tab(label="Overview", tab_id="utterance-tab-1"),
+                    dbc.Tab(label="Emotions", tab_id="utterance-tab-2"),
+                    dbc.Tab(label="MITI Codes", tab_id="utterance-tab-3"),
+                    dbc.Tab(label="Empathy", tab_id="utterance-tab-4"),
+                ],
+                id="utterance-tabs",
+                active_tab="utterance-tab-1",
+            )
+        ),
+        dbc.CardBody(
+            [
+                html.H5(id="speaker"),
+                html.Br(),
+                html.Div(id="utterance")
+            ],
+            id="utterance-card"
+        )
+    ]
+)
+
 emotion_analysis = dbc.Card(
     dbc.CardBody(
         [
@@ -108,18 +134,22 @@ empathy_analysis = dbc.Card(
     ]
 )
 
+pair_analysis = dbc.Card(
+    [
+        html.Pre(id="pair")
+    ]
+)
+
 
 
 analysis = html.Div(
     [
-        html.Br(),
-        html.H5(id="speaker"),
-        html.Br(),
-        html.Div(id="utterance"),
+        utterance_component,
         dcc.Graph(id="micromodel-results", style={"display": "none"}),
         dcc.Store(id="emotion-classification-storage"),
         emotion_analysis,
         empathy_analysis,
+        pair_analysis,
     ],
     style={"display": "none"},
     id="analysis",
