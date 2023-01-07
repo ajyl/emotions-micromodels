@@ -62,6 +62,9 @@ class EmpathyClassifier:
 
     def predict_empathy(self, seeker_posts, response_posts):
 
+        assert len(seeker_posts) == 1
+        assert len(response_posts) == 1
+
         input_ids_SP = []
         attention_masks_SP = []
 
@@ -189,22 +192,22 @@ class EmpathyClassifier:
 
         return {
             "er": {
-                "logits": logits_empathy_ER,
-                "probabilities": empathy_ER_prob,
-                "predictions": predictions_ER,
-                "raionale": rationale_er,
+                "logits": logits_empathy_ER[0],
+                "probabilities": empathy_ER_prob[0],
+                "predictions": predictions_ER[0],
+                "rationale": rationale_er,
             },
             "int": {
-                "logits": logits_empathy_IP,
-                "probabilities": empathy_IP_prob,
-                "predictions": predictions_IP,
-                "raionale": rationale_int,
+                "logits": logits_empathy_IP[0],
+                "probabilities": empathy_IP_prob[0],
+                "predictions": predictions_IP[0],
+                "rationale": rationale_int,
             },
             "exp": {
-                "logits": logits_empathy_EX,
-                "probabilities": empathy_EX_prob,
-                "predictions": predictions_EX,
-                "raionale": rationale_exp,
+                "logits": logits_empathy_EX[0],
+                "probabilities": empathy_EX_prob[0],
+                "predictions": predictions_EX[0],
+                "rationale": rationale_exp,
             },
         }
 

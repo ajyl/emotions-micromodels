@@ -437,16 +437,19 @@ class Encoder:
         empathy = self.epitome.predict_empathy([prompt], [response])
         return {
             "epitome_er": {
-                "probabilities": empathy["er"]["probabilities"][0],
-                "predictions": empathy["er"]["predictions"][0],
+                "probabilities": empathy["er"]["probabilities"],
+                "predictions": empathy["er"]["predictions"],
+                "rationale": empathy["er"]["rationale"],
             },
             "epitome_int": {
-                "probabilities": empathy["int"]["probabilities"][0],
-                "predictions": empathy["int"]["predictions"][0],
+                "probabilities": empathy["int"]["probabilities"],
+                "predictions": empathy["int"]["predictions"],
+                "rationale": empathy["int"]["rationale"],
             },
             "epitome_exp": {
-                "probabilities": empathy["exp"]["probabilities"][0],
-                "predictions": empathy["exp"]["predictions"][0],
+                "probabilities": empathy["exp"]["probabilities"],
+                "predictions": empathy["exp"]["predictions"],
+                "rationale": empathy["exp"]["rationale"],
             },
         }
 
@@ -526,8 +529,9 @@ class Encoder:
             }
             for epitome_type, _results in epitome_results.items():
                 response_encoding["micromodels"][epitome_type] = {
-                    "max_score": _results["probabilities"][0]
-                    + _results["probabilities"][1],
+                    "max_score": _results["probabilities"][1]
+                    + _results["probabilities"][2],
+                    "segment": _results["rationale"],
                 }
 
         return response_encoding

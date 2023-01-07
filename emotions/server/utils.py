@@ -9,13 +9,22 @@ COLOR_SCHEME = px.colors.qualitative.Set2
 
 
 MM_TYPES = [
-    "miti_",
-    "empathy_",
-    "epitome_",
-    "custom_",
-    "emotion_",
-    "cog_dist_",
+    "miti",
+    "empathy",
+    "epitome",
+    "custom",
+    "emotion",
+    "cog_dist",
 ]
+
+LEGEND_NAMES = {
+    "miti": "MITI Codes",
+    "empathy": "Empathy (Micromodels)",
+    "epitome": "Empathy (EPITOME)",
+    "custom": "Emotions (Custom)",
+    "emotion": "Emotions (Empathetic Dialogue)",
+    "cog_dist": "Cognitive Distortions",
+}
 
 
 def get_mm_color(mm_name):
@@ -27,6 +36,19 @@ def get_mm_color(mm_name):
         if mm_name.startswith(prefix):
             return COLOR_SCHEME[idx]
     raise ValueError("Unknown MM %s!" % mm_name)
+
+
+def get_legend_name(bar_trace):
+
+    mm_name = bar_trace.y[0]
+    for idx, prefix in enumerate(MM_TYPES):
+        if mm_name.startswith(prefix):
+            return LEGEND_NAMES[prefix]
+    raise ValueError("Unknown MM %s!" % mm_name)
+
+
+
+
 
 
 def entname(name):

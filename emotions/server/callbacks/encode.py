@@ -20,7 +20,7 @@ from emotions.constants import (
     EMOTION_THRESHOLD,
     EMPATHY_THRESHOLD,
 )
-from emotions.server.utils import get_mm_color, entity, COLOR_SCHEME, MM_TYPES
+from emotions.server.utils import get_mm_color, entity, COLOR_SCHEME, MM_TYPES, get_legend_name
 from emotions.server.callbacks.annotate_utterance import (
     update_utterance_component,
     annotate_utterance,
@@ -186,7 +186,6 @@ def encode(
         json={"response": utterance, "prompt": prev_utterance},
     )
     response_obj = response.json()
-    breakpoint()
 
     # Emotions - Predictions
     emotion_classifications = response_obj["emotion"]["predictions"][0][0]
@@ -221,7 +220,7 @@ def encode(
     ]
 
     # Empathy - EPITOME
-    epitome = response_obj["epitome"]
+    #epitome = response_obj["epitome"]
 
     # MITI (PAIR)
     pair_results = response_obj.get("pair")
@@ -245,14 +244,14 @@ def encode(
     data = []
     for mm in sorted_mms:
         mm_result = response_obj["micromodels"][mm]
-        #if mm.startswith("epitome_") or mm.startswith("pair"):
+        if mm.startswith("pair"):
+            continue
+
         data.append(
             (
                 mm,
                 utterance,
                 max(mm_result["max_score"], 0),
-                mm_result["top_k_scores"][0][0],
-                mm_result["top_k_scores"][0][1],
                 mm_result["segment"],
                 get_mm_color(mm),
             )
@@ -264,8 +263,6 @@ def encode(
             "Micromodel",
             "query",
             "score",
-            "similar_segment",
-            "similar_score",
             "segment",
             "color",
         ],
@@ -276,15 +273,27 @@ def encode(
         y="Micromodel",
         color="color",
         hover_name="Micromodel",
-        hover_data=["Micromodel", "score", "similar_segment", "similar_score"],
-        custom_data=["similar_segment", "similar_score", "segment", "query"],
+        hover_data=["Micromodel", "score"],
+        custom_data=["segment", "query"],
         orientation="h",
         height=1500,
         color_discrete_sequence=COLOR_SCHEME,
+        labels={"Micromodel": "testing"},
     )
     fig.update_coloraxes(showscale=False)
-    fig.layout.showlegend = False
-    fig.update_layout()
+    #fig.layout.showlegend = False
+    fig.update_layout(
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.05,
+            xanchor="left",
+            x=0,
+            title="",
+            traceorder="reversed",
+        ),
+    )
+    fig.for_each_trace(lambda t: t.update(name=get_legend_name(t)))
 
     speaker = speaker[0].upper() + speaker[1:] + ":"
 
@@ -294,7 +303,7 @@ def encode(
         "miti": get_annotation_spans(
             utterance, response_obj, "miti_", MITI_THRESHOLD
         ),
-        "emotions": get_annotation_spans(
+        "custom": get_annotation_spans(
             utterance, response_obj, "custom_", EMOTION_THRESHOLD
         ),
         "empathy": get_annotation_spans(
@@ -302,7 +311,7 @@ def encode(
         ),
     }
     annotated_utterance = annotate_utterance(
-        utterance_annotation_obj, "emotions"
+        utterance_annotation_obj, "custom"
     )
 
     return [
