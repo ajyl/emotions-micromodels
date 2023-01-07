@@ -244,9 +244,6 @@ def encode(
     data = []
     for mm in sorted_mms:
         mm_result = response_obj["micromodels"][mm]
-        if mm.startswith("pair"):
-            continue
-
         data.append(
             (
                 mm,

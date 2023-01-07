@@ -22,21 +22,17 @@ def handle_hover(hover_data):
         segment_start_idx = query.index(segment)
         segment_end_idx = segment_start_idx + len(segment)
 
-        if segment_start_idx == 0 and segment_end_idx == len(query):
-            annotated_query = no_update
-
-        else:
-            annotated_query = (
-                [query[:segment_start_idx]]
-                + [
-                    entity(
-                        query[segment_start_idx:segment_end_idx],
-                        micromodel,
-                        get_mm_color(micromodel),
-                    )
-                ]
-                + [query[segment_end_idx:]]
-            )
+        annotated_query = (
+            [query[:segment_start_idx]]
+            + [
+                entity(
+                    query[segment_start_idx:segment_end_idx],
+                    micromodel,
+                    get_mm_color(micromodel),
+                )
+            ]
+            + [query[segment_end_idx:]]
+        )
     return [
         no_update,
         no_update,

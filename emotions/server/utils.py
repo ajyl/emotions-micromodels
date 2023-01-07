@@ -10,6 +10,7 @@ COLOR_SCHEME = px.colors.qualitative.Set2
 
 MM_TYPES = [
     "miti",
+    "pair",
     "empathy",
     "epitome",
     "custom",
@@ -19,6 +20,7 @@ MM_TYPES = [
 
 LEGEND_NAMES = {
     "miti": "MITI Codes",
+    "pair": "MITI Code - Reflection (PAIR)",
     "empathy": "Empathy (Micromodels)",
     "epitome": "Empathy (EPITOME)",
     "custom": "Emotions (Custom)",

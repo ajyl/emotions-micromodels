@@ -525,7 +525,8 @@ class Encoder:
             epitome_results = self.run_epitome(prev_utterance, utterance)
 
             response_encoding["micromodels"]["pair"] = {
-                "max_score": self.run_pair(prev_utterance, utterance)[0]
+                "max_score": self.run_pair(prev_utterance, utterance)[0],
+                "segment": ""
             }
             for epitome_type, _results in epitome_results.items():
                 response_encoding["micromodels"][epitome_type] = {
