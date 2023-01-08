@@ -75,6 +75,11 @@ def update_global_exp(
         no_update,
         no_update,
         no_update,
+        no_update,
+        no_update,
+        no_update,
+        no_update,
+        no_update,
     ]
 
 
@@ -98,7 +103,12 @@ def update_global_exp(
         Output("emotion_3", "children"),
         Output("emotion_score_3", "children"),
         Output("emotion-classification-table", "style"),
-        Output("empathy", "children"),
+        Output("emotional_reaction_mm", "children"),
+        Output("interpretation_mm", "children"),
+        Output("exploration_mm", "children"),
+        Output("emotional_reaction_epitome", "children"),
+        Output("interpretation_epitome", "children"),
+        Output("exploration_epitome", "children"),
         Output("pair", "children"),
     ],
     [
@@ -128,6 +138,11 @@ def encode(
     if sum(n_clicks) == 0:
         return [
             {"display": "none"},
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
             no_update,
             no_update,
             no_update,
@@ -242,6 +257,7 @@ def encode(
         ])
 
     data = []
+    breakpoint()
     for mm in sorted_mms:
         mm_result = response_obj["micromodels"][mm]
         data.append(
@@ -251,6 +267,7 @@ def encode(
                 max(mm_result["max_score"], 0),
                 mm_result["segment"],
                 get_mm_color(mm),
+                mm_result.get("top_k_scores", [[None]])[0][0],
             )
         )
 
@@ -262,6 +279,7 @@ def encode(
             "score",
             "segment",
             "color",
+            "similar_seed",
         ],
     )
     fig = px.bar(
@@ -270,12 +288,12 @@ def encode(
         y="Micromodel",
         color="color",
         hover_name="Micromodel",
-        hover_data=["Micromodel", "score"],
+        hover_data=["Micromodel", "score", "similar_seed"],
         custom_data=["segment", "query"],
         orientation="h",
         height=1500,
         color_discrete_sequence=COLOR_SCHEME,
-        labels={"Micromodel": "testing"},
+        #labels={"Micromodel": "testing"},
     )
     fig.update_coloraxes(showscale=False)
     #fig.layout.showlegend = False
@@ -330,6 +348,11 @@ def encode(
         emotion_classifications[2],
         emotion_scores[2],
         {"display": "block"},
-        json.dumps(empathy, indent=2),
+        round(response_obj["micromodels"]["empathy_emotional_reactions"]["max_score"], 3),
+        round(response_obj["micromodels"]["empathy_interpretations"]["max_score"], 3),
+        round(response_obj["micromodels"]["empathy_explorations"]["max_score"], 3),
+        round(response_obj["micromodels"]["epitome_er"]["max_score"], 3),
+        round(response_obj["micromodels"]["epitome_int"]["max_score"], 3),
+        round(response_obj["micromodels"]["epitome_exp"]["max_score"], 3),
         json.dumps(pair_results, indent=2),
     ]

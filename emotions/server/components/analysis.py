@@ -104,33 +104,43 @@ empathy_analysis = dbc.Card(
     [
         html.H4("Empathy Analysis"),
         html.Pre(id="empathy"),
-        # html.Table(
-        #    [
-        #        html.Thead(
-        #            html.Tr(
-        #                [
-        #                    html.Th("Emotional Reaction"),
-        #                    html.Th("Interpretation"),
-        #                    html.Th("Exploration"),
-        #                ],
-        #            ),
-        #            style={"hidden": True},
-        #        ),
-        #        html.Tbody(
-        #            [
-        #                html.Tr(
-        #                    [
-        #                        html.Td(id="emotional_reaction"),
-        #                        html.Td(id="interpretation"),
-        #                        html.Td(id="exploration"),
-        #                    ]
-        #                ),
-        #            ]
-        #        ),
-        #    ],
-        #    style={"display": "none"},
-        #    id="empathy-table",
-        # )
+        html.Table(
+           [
+               html.Thead(
+                   html.Tr(
+                       [
+                           html.Th(""),
+                           html.Th("Emotional Reaction"),
+                           html.Th("Interpretation"),
+                           html.Th("Exploration"),
+                       ],
+                   ),
+                   style={"hidden": True},
+               ),
+               html.Tbody(
+                   [
+                        html.Tr(
+                           [
+                               html.Td("Micromodels", style={"font-weight": "bold"}),
+                               html.Td(id="emotional_reaction_mm"),
+                               html.Td(id="interpretation_mm"),
+                               html.Td(id="exploration_mm"),
+                           ]
+                       ),
+                       html.Tr(
+                           [
+                               html.Td("Epitome", style={"font-weight": "bold"}),
+                               html.Td(id="emotional_reaction_epitome"),
+                               html.Td(id="interpretation_epitome"),
+                               html.Td(id="exploration_epitome"),
+                           ]
+                       ),
+                   ]
+               ),
+           ],
+           #style={"display": "none"},
+           id="empathy-table",
+        )
     ]
 )
 

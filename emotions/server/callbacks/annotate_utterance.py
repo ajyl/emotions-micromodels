@@ -67,6 +67,11 @@ def update_utterance_component(annotation_obj, tab_id):
         no_update,
         no_update,
         no_update,
+        no_update,
+        no_update,
+        no_update,
+        no_update,
+        no_update,
     ]
 
 

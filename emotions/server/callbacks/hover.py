@@ -54,4 +54,9 @@ def handle_hover(hover_data):
         no_update,
         no_update,
         no_update,
+        no_update,
+        no_update,
+        no_update,
+        no_update,
+        no_update,
     ]
