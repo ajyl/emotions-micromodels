@@ -147,7 +147,7 @@ class BertFeaturizer(Orchestrator):
         super().__init__(mm_basepath, configs)
         if not all(config["model_type"] == "bert_query" for config in configs):
             raise ValueError("Invalid micromodel type found in configs.")
-        device = kwargs.get("device", "cuda:1")
+        device = kwargs.get("device", "cpu")
         self.bert = SentenceTransformer(
             #"paraphrase-xlm-r-multilingual-v1", device=device
             "all-MiniLM-L6-v2", device=device

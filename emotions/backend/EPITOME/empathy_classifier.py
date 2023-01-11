@@ -214,7 +214,7 @@ class EmpathyClassifier:
 
 if __name__ == "__main__":
     testing = EmpathyClassifier(
-        "cuda:1",
+        "cpu",
         ER_model_path="/home/repos/emotions-micromodels/emotions/models/EPITOME_ER.pth",
         IP_model_path="/home/repos/emotions-micromodels/emotions/models/EPITOME_INT.pth",
         EX_model_path="/home/repos/emotions-micromodels/emotions/models/EPITOME_EXP.pth",

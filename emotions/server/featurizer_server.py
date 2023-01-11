@@ -30,11 +30,11 @@ encoder = load_encoder(
     emp_er_path=emp_er_classifier,
     emp_exp_path=emp_exp_classifier,
     emp_int_path=emp_int_classifier,
-    epitome_er_path=epitome_er_classifier,
-    epitome_exp_path=epitome_exp_classifier,
-    epitome_int_path=epitome_int_classifier,
-    pair_path=pair_path,
-    device="cuda:0",
+    #epitome_er_path=epitome_er_classifier,
+    #epitome_exp_path=epitome_exp_classifier,
+    #epitome_int_path=epitome_int_classifier,
+    #pair_path=pair_path,
+    device="cpu",
 )
 
 
@@ -85,4 +85,4 @@ def ping():
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(port=8090)

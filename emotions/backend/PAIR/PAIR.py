@@ -6,7 +6,7 @@ import numpy as np
 from transformers import AutoTokenizer, AutoModel, AutoModelForMaskedLM
 from cross_scorer_model import CrossScorerCrossEncoder
 
-device = "cuda"
+device = "cpu"
 
 
 def run_model(model, tokenizer, prompt, response):

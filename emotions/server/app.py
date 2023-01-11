@@ -7,8 +7,8 @@ import time
 import requests
 from dash import Dash, html
 import dash_bootstrap_components as dbc
-from components import analysis, dialogue_dropdown, conversation
-from callbacks.encode import encode
+from emotions.server.components import analysis, dialogue_dropdown, conversation
+from emotions.server.callbacks.encode import encode
 from emotions.constants import FEATURIZER_SERVER
 
 
@@ -48,6 +48,7 @@ app.layout = dbc.Container(
     ],
     fluid=True,
 )
+server = app.server
 
 
 if __name__ == "__main__":

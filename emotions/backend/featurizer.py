@@ -10,7 +10,7 @@ import torch
 from nltk import tokenize
 from tqdm import tqdm
 from interpret.glassbox import ExplainableBoostingClassifier
-from interpret import show
+from interpret.glassbox.ebm.ebm import EBMPreprocessor
 from transformers import AutoTokenizer, AutoModel
 
 from emotions.config import (
@@ -630,7 +630,7 @@ def main():
         epitome_exp_path=epitome_exp_classifier,
         epitome_int_path=epitome_int_classifier,
         pair_path=pair_path,
-        device="cuda:0",
+        device="cpu",
     )
 
     prompt = "I almost got into a car accident."
