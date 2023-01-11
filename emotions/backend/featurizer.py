@@ -522,17 +522,19 @@ class Encoder:
         """
         response_encoding = self.encode_utterance(utterance)
         if prev_utterance is not None:
-            epitome_results = self.run_epitome(prev_utterance, utterance)
+            if self.epitome:
+                epitome_results = self.run_epitome(prev_utterance, utterance)
+                for epitome_type, _results in epitome_results.items():
+                    response_encoding["micromodels"][epitome_type] = {
+                        "max_score": _results["probabilities"][1]
+                        + _results["probabilities"][2],
+                        "segment": _results["rationale"],
+                    }
 
-            response_encoding["micromodels"]["pair"] = {
-                "max_score": self.run_pair(prev_utterance, utterance)[0],
-                "segment": ""
-            }
-            for epitome_type, _results in epitome_results.items():
-                response_encoding["micromodels"][epitome_type] = {
-                    "max_score": _results["probabilities"][1]
-                    + _results["probabilities"][2],
-                    "segment": _results["rationale"],
+            if self.pair and self.pair_tokenizer:
+                response_encoding["micromodels"]["pair"] = {
+                    "max_score": self.run_pair(prev_utterance, utterance)[0],
+                    "segment": ""
                 }
 
         return response_encoding

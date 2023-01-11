@@ -257,19 +257,19 @@ def encode(
         ])
 
     data = []
-    breakpoint()
     for mm in sorted_mms:
-        mm_result = response_obj["micromodels"][mm]
-        data.append(
-            (
-                mm,
-                utterance,
-                max(mm_result["max_score"], 0),
-                mm_result["segment"],
-                get_mm_color(mm),
-                mm_result.get("top_k_scores", [[None]])[0][0],
+        if mm in response_obj["micromodels"]:
+            mm_result = response_obj["micromodels"][mm]
+            data.append(
+                (
+                    mm,
+                    utterance,
+                    max(mm_result["max_score"], 0),
+                    mm_result["segment"],
+                    get_mm_color(mm),
+                    mm_result.get("top_k_scores", [[None]])[0][0],
+                )
             )
-        )
 
     data = pd.DataFrame(
         data=data,
@@ -329,6 +329,16 @@ def encode(
         utterance_annotation_obj, "custom"
     )
 
+    epitome_er = "N/A"
+    epitome_int = "N/A"
+    epitome_exp = "N/A"
+    if "epitome_er" in response_obj["micromodels"]:
+        epitome_er = round(response_obj["micromodels"]["epitome_er"]["max_score"], 3),
+    if "epitome_int" in response_obj["micromodels"]:
+        epitome_int = round(response_obj["micromodels"]["epitome_int"]["max_score"], 3),
+    if "epitome_exp" in response_obj["micromodels"]:
+        epitome_exp = round(response_obj["micromodels"]["epitome_exp"]["max_score"], 3),
+
     return [
         {"display": "block"},
         speaker,
@@ -351,8 +361,8 @@ def encode(
         round(response_obj["micromodels"]["empathy_emotional_reactions"]["max_score"], 3),
         round(response_obj["micromodels"]["empathy_interpretations"]["max_score"], 3),
         round(response_obj["micromodels"]["empathy_explorations"]["max_score"], 3),
-        round(response_obj["micromodels"]["epitome_er"]["max_score"], 3),
-        round(response_obj["micromodels"]["epitome_int"]["max_score"], 3),
-        round(response_obj["micromodels"]["epitome_exp"]["max_score"], 3),
+        epitome_er,
+        epitome_int,
+        epitome_exp,
         json.dumps(pair_results, indent=2),
     ]
