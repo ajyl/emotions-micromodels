@@ -11,6 +11,9 @@ from emotions.server.components import analysis, dialogue_dropdown, conversation
 from emotions.server.callbacks.encode import encode
 from emotions.constants import FEATURIZER_SERVER
 
+import logging
+gunicorn_logger = logging.getLogger("gunicorn.error")
+
 
 def init_featurizer_server(server_addr):
     """
@@ -49,6 +52,10 @@ app.layout = dbc.Container(
     fluid=True,
 )
 server = app.server
+app.logger.handlers = gunicorn_logger.handlers
+app.logger.setLevel(gunicorn_logger.level)
+server.logger.handlers = gunicorn_logger.handlers
+server.logger.setLevel(gunicorn_logger.level)
 
 
 if __name__ == "__main__":

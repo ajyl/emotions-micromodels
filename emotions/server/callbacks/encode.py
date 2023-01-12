@@ -6,6 +6,7 @@ import json
 import pickle
 import base64
 import requests
+import logging
 import pandas as pd
 from nltk.tokenize import word_tokenize
 from dash import html, dcc, callback, Input, Output, State, ALL, ctx, no_update
@@ -27,6 +28,9 @@ from emotions.server.callbacks.annotate_utterance import (
     get_annotation_spans,
 )
 from emotions.server.callbacks.hover import handle_hover
+
+logger = logging.getLogger("gunicorn.error")
+logger.setLevel(logging.INFO)
 
 
 def update_global_exp(
@@ -134,6 +138,9 @@ def encode(
     annotated_utterance_storage,
     utterances,
 ):
+    triggered_id = ctx.triggered_id
+    logger.info(triggered_id)
+    logger.info(n_clicks)
 
     if sum(n_clicks) == 0:
         return [
@@ -164,8 +171,6 @@ def encode(
             no_update,
         ]
 
-    triggered_id = ctx.triggered_id
-    print(triggered_id)
 
     if triggered_id is None:
         raise PreventUpdate
