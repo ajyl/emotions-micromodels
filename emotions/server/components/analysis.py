@@ -93,7 +93,6 @@ emotion_analysis = dbc.Card(
                         id="global-explanation",
                         style={"display": "none"},
                     ),
-                    dcc.Store(id="global-explanation-storage"),
                 ],
             ),
         ]

@@ -79,6 +79,11 @@ def encode():
     return json.dumps(result, cls=MyEncoder)
 
 
+@app.route("/explain", methods=["GET", "POST"])
+def explain():
+    return json.dumps(encoder.get_explain(), cls=MyEncoder)
+
+
 @app.route("/ping", methods=["GET"])
 def ping():
     return {"ready": True}

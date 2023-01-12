@@ -27,15 +27,15 @@ from emotions.server.callbacks.annotate_utterance import (
     get_annotation_spans,
 )
 from emotions.server.callbacks.hover import handle_hover
+from emotions.server.init_server import EMOTION_EXPL
 
 
 def update_global_exp(
-    global_exp_storage, explanation_dropdown, emotion_classifications
+    global_exp, explanation_dropdown, emotion_classifications
 ):
     """
     Update global explanation figure.
     """
-    global_exp = pickle.loads(base64.b64decode(global_exp_storage))
     visual_idx = None
     if explanation_dropdown in global_exp.feature_names:
         visual_idx = global_exp.feature_names.index(explanation_dropdown)
@@ -79,7 +79,6 @@ def update_global_exp(
         no_update,
         no_update,
         no_update,
-        no_update,
     ]
 
 
@@ -94,7 +93,6 @@ def update_global_exp(
         Output("micromodel-results", "style"),
         Output("global-explanation", "figure"),
         Output("global-explanation", "style"),
-        Output("global-explanation-storage", "data"),
         Output("emotion-classification-storage", "data"),
         Output("emotion_1", "children"),
         Output("emotion_score_1", "children"),
@@ -115,7 +113,6 @@ def update_global_exp(
         Input({"type": "dialogue-click", "index": ALL}, "n_clicks"),
         Input("micromodel-results", "hoverData"),
         Input("global-explanation-feature-dropdown", "value"),
-        Input("global-explanation-storage", "data"),
         Input("emotion-classification-storage", "data"),
         Input("utterance-tabs", "active_tab"),
         Input("annotated-utterance-storage", "data"),
@@ -128,7 +125,6 @@ def encode(
     n_clicks,
     hover_data,
     explanation_dropdown,
-    explanation_storage,
     emotion_classification_storage,
     utterance_tab,
     annotated_utterance_storage,
@@ -138,7 +134,6 @@ def encode(
     if sum(n_clicks) == 0:
         return [
             {"display": "none"},
-            no_update,
             no_update,
             no_update,
             no_update,
@@ -182,7 +177,7 @@ def encode(
     # for this case?
     if triggered_id == "global-explanation-feature-dropdown":
         return update_global_exp(
-            explanation_storage,
+            EMOTION_EXPL,
             explanation_dropdown,
             emotion_classification_storage,
         )
@@ -207,8 +202,7 @@ def encode(
     emotion_scores = response_obj["emotion"]["predictions"][0][1]
 
     # Emotions - Explanations
-    explanations = response_obj["emotion"]["explanations"]
-    global_exp = pickle.loads(base64.b64decode(explanations["global"]))
+    global_exp = EMOTION_EXPL
     visual_idx = None
     if explanation_dropdown in global_exp.feature_names:
         visual_idx = global_exp.feature_names.index(explanation_dropdown)
@@ -293,10 +287,8 @@ def encode(
         orientation="h",
         height=1500,
         color_discrete_sequence=COLOR_SCHEME,
-        #labels={"Micromodel": "testing"},
     )
     fig.update_coloraxes(showscale=False)
-    #fig.layout.showlegend = False
     fig.update_layout(
         legend=dict(
             orientation="h",
@@ -349,7 +341,6 @@ def encode(
         {"display": "block"},
         global_fig,
         {"display": "block"},
-        explanations["global"],
         emotion_classifications,
         emotion_classifications[0],
         emotion_scores[0],

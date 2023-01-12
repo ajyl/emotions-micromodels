@@ -506,7 +506,6 @@ class Encoder:
         return {
             "emotion": {
                 "predictions": emotion_preds,
-                "explanations": {"global": self.ed_model.explain_global()},
             },
             "empathy": {
                 "empathy_emotional_reactions": emp_er,
@@ -578,6 +577,18 @@ class Encoder:
                 breakpoint()
 
         return bert_results
+
+    def get_explain(self):
+        """
+        Get explanation object.
+        """
+        explanation = None
+        if self.ed_model:
+            explanation = self.ed_model.explain_global()
+
+        return {
+            "explanations": {"global": explanation}
+        }
 
 
 def load_encoder(
