@@ -135,7 +135,7 @@ def get_annotation_spans(utterance, response_obj, prefix, threshold):
 
         else:
             # Should never reach here.
-            breakpoint()
+            raise RuntimeError("z")
 
     if prev not in merged_spans:
         merged_spans.append(prev)
