@@ -52,7 +52,12 @@ except RuntimeError:
 
 EMOTION_EXPL = init_explanation(FEATURIZER_SERVER)
 
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = Dash(
+    __name__,
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    serve_locally=False,
+    routes_pathname_prefix="/counseling/"
+)
 app.layout = dbc.Container(
     [
         html.Div([html.H1(children="Welcome!")]),
