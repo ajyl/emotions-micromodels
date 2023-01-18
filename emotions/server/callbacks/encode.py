@@ -33,6 +33,9 @@ from emotions.server.init_server import EMOTION_EXPL
 logger = logging.getLogger("gunicorn.error")
 logger.setLevel(logging.INFO)
 
+logger = logging.getLogger("gunicorn.error")
+logger.setLevel(logging.INFO)
+
 
 def update_global_exp(
     global_exp, explanation_dropdown, emotion_classifications
