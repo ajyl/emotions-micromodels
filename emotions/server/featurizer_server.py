@@ -11,6 +11,8 @@ from tqdm import tqdm
 from flask import Flask, request
 from interpret.glassbox.ebm.ebm import EBMExplanation
 from emotions.backend.featurizer import load_encoder
+from emotions.server.components.dialogue_dropdown import init_anno_mi_data
+from emotions.constants import THERAPIST, PATIENT
 
 
 MM_HOME = os.environ.get("MM_HOME")
@@ -22,6 +24,11 @@ emp_int_classifier = os.path.join(MODELS_DIR, "emp_int.pkl")
 epitome_er_classifier = os.path.join(MODELS_DIR, "EPITOME_ER.pth")
 epitome_exp_classifier = os.path.join(MODELS_DIR, "EPITOME_EXP.pth")
 epitome_int_classifier = os.path.join(MODELS_DIR, "EPITOME_INT.pth")
+
+cache_filepath = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)),
+    "cache.json"
+)
 
 pair_path = os.path.join(MODELS_DIR, "pair.pth")
 
@@ -38,7 +45,30 @@ encoder = load_encoder(
 )
 
 
-cache = {}
+
+def init_cache(cache_filepath=None):
+    print("Initializing cache...")
+    cache = {}
+    if cache_filepath and os.path.isfile(cache_filepath):
+        with open(cache_filepath, "r") as file_p:
+            cache = json.load(file_p)
+        return cache
+
+    mi_data = init_anno_mi_data()
+    for dialogue in tqdm(mi_data.values()):
+        for idx, utt_obj in enumerate(dialogue):
+            if utt_obj["speaker"] == THERAPIST and idx > 0:
+                prompt = dialogue[idx-1]["utterance"]
+                response = utt_obj["utterance"]
+
+                cache[utt_obj["utterance"]] = encoder.encode(response, prompt)
+            else:
+                cache[utt_obj["utterance"]] = encoder.encode_utterance(utt_obj["utterance"])
+
+    return cache
+
+
+cache = init_cache(cache_filepath)
 
 app = Flask(__name__)
 

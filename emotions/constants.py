@@ -1,6 +1,11 @@
 """
 Constant variables used by app.
 """
+import os
+
+MM_HOME = os.environ.get("MM_HOME")
+DATA_HOME = os.path.join(MM_HOME, "emotions/data")
+
 
 FEATURIZER_SERVER = "http://127.0.0.1:8090"
 MITI_THRESHOLD = 0.5

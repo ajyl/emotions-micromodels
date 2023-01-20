@@ -70,5 +70,22 @@ MITI_SEEDS = {
         "So what are your thoughts on",
         "Ok so tell me more about that",
         "Why an 8 and not a 4?",
-    ]
+    ],
+    "Confrontation": [
+        "You're lucky you didn't kill yourself or somebody else.",
+        "Look, I'm an ER doctor and I think I know when somebody's an alcoholic",
+        "I think you have a serious drinking problem and you better straighten it out.",
+        "Do not drink and drive.",
+        "What do you intend to do about that drinking problem?",
+        "You've got to learn to take responsibility.",
+        "Now's the time to quit.",
+        "It's now or never.",
+    ],
+    "Advise_With_Permission": [
+        "Would it be all right if I suggested something?",
+        "Do you mind if I tell you how ",
+        "We could try brainstorming to come up with ideas about quitting if you'd like",
+        "This may or may not work for you, but I recommend",
+        "I'd like to get your thoughts, but we can try to",
+    ],
 }

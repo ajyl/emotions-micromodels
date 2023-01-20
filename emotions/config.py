@@ -70,16 +70,6 @@ ED_EMOTIONS = [
     "trusting",
 ]
 
-ED_EMOTIONS_EKMAN = [
-    "angry",  # anger
-    "disgusted",  # disgust
-    # fear
-    "joyful",  # joy
-    # neutral
-    "sad",  # sadness
-    "surprised",  # surprise
-]
-
 
 GO_EMOTIONS = [
     "admiration",
