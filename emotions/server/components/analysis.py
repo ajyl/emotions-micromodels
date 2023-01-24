@@ -19,8 +19,8 @@ utterance_component = dbc.Card(
         dbc.CardHeader(
             dbc.Tabs(
                 [
-                    dbc.Tab(label="Emotions", tab_id="utterance-tab-1"),
-                    dbc.Tab(label="MITI Codes", tab_id="utterance-tab-2"),
+                    dbc.Tab(label="MITI Codes", tab_id="utterance-tab-1"),
+                    dbc.Tab(label="Emotions", tab_id="utterance-tab-2"),
                     dbc.Tab(label="Empathy", tab_id="utterance-tab-3"),
                 ],
                 id="utterance-tabs",

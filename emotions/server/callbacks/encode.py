@@ -252,18 +252,19 @@ def encode(
 
     data = []
     for mm in sorted_mms:
-        if mm in response_obj["micromodels"]:
-            mm_result = response_obj["micromodels"][mm]
-            data.append(
-                (
-                    mm,
-                    utterance,
-                    max(mm_result["max_score"], 0),
-                    mm_result["segment"],
-                    get_mm_color(mm),
-                    mm_result.get("top_k_scores", [[None]])[0][0],
-                )
+        if mm not in response_obj["micromodels"]:
+            breakpoint()
+        mm_result = response_obj["micromodels"][mm]
+        data.append(
+            (
+                mm,
+                utterance,
+                max(mm_result["max_score"], 0),
+                mm_result["segment"],
+                get_mm_color(mm),
+                mm_result.get("top_k_scores", [[None]])[0][0],
             )
+        )
 
     data = pd.DataFrame(
         data=data,
@@ -318,7 +319,7 @@ def encode(
         ),
     }
     annotated_utterance = annotate_utterance(
-        utterance_annotation_obj, "custom"
+        utterance_annotation_obj, "miti"
     )
 
     epitome_er = "N/A"

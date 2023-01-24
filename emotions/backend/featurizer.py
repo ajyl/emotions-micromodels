@@ -30,6 +30,7 @@ from emotions.backend.EPITOME.empathy_classifier import EmpathyClassifier
 from emotions.backend.PAIR.cross_scorer_model import CrossScorerCrossEncoder
 from emotions.seeds.custom_emotions import ED_SEEDS
 from emotions.seeds.miti_codes import MITI_SEEDS
+from emotions.constants import MITI_THRESHOLD
 
 
 MM_HOME = os.environ.get("MM_HOME")
@@ -280,10 +281,10 @@ class Encoder:
                     MM_HOME, "models/miti_%s" % miti_code
                 ),
                 "setup_args": {
-                    "threshold": 0.8,
+                    "threshold": MITI_THRESHOLD,
                     "seed": seed,
                     "infer_config": {
-                        "segment_config": {"window_size": 10, "step_size": 3}
+                        "segment_config": {"window_size": "sent"}
                     },
                 },
             }
@@ -453,6 +454,15 @@ class Encoder:
             },
         }
 
+    def run_epitome_empty(self):
+        return {
+            epitome: {
+                "probabilities": [0, 0, 0],
+                "rationale": ""
+            }
+            for epitome in ["epitome_er", "epitome_int", "epitome_exp"]
+        }
+
     def run_pair(self, prompt, response):
         """
         Run PAIR.
@@ -520,21 +530,25 @@ class Encoder:
         Encode a single dialogue turn.
         """
         response_encoding = self.encode_utterance(utterance)
-        if prev_utterance is not None:
-            if self.epitome:
-                epitome_results = self.run_epitome(prev_utterance, utterance)
-                for epitome_type, _results in epitome_results.items():
-                    response_encoding["micromodels"][epitome_type] = {
-                        "max_score": _results["probabilities"][1]
-                        + _results["probabilities"][2],
-                        "segment": _results["rationale"],
-                    }
 
-            if self.pair and self.pair_tokenizer:
-                response_encoding["micromodels"]["pair"] = {
-                    "max_score": self.run_pair(prev_utterance, utterance)[0],
-                    "segment": ""
-                }
+        epitome_results = self.run_epitome_empty()
+        if self.epitome and prev_utterance is not None:
+            epitome_results = self.run_epitome(prev_utterance, utterance)
+        for epitome_type, _results in epitome_results.items():
+            response_encoding["micromodels"][epitome_type] = {
+                "max_score": _results["probabilities"][1]
+                + _results["probabilities"][2],
+                "segment": _results["rationale"],
+            }
+
+        response_encoding["micromodels"]["pair"] = {
+            "max_score": 0, "segment": ""
+        }
+        if self.pair and self.pair_tokenizer and prev_utterance is not None:
+            response_encoding["micromodels"]["pair"] = {
+                "max_score": self.run_pair(prev_utterance, utterance)[0],
+                "segment": ""
+            }
 
         return response_encoding
 

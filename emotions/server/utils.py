@@ -18,6 +18,11 @@ MM_TYPES = [
     "cog_dist",
 ]
 
+MM_COLORS = {
+    mm_name: COLOR_SCHEME[idx]
+    for idx, mm_name in enumerate(MM_TYPES[::-1])
+}
+
 LEGEND_NAMES = {
     "miti": "MITI Codes",
     "pair": "MITI Code - Reflection (PAIR)",
@@ -36,7 +41,7 @@ def get_mm_color(mm_name):
     mm_prefixes = MM_TYPES[::-1]
     for idx, prefix in enumerate(mm_prefixes):
         if mm_name.startswith(prefix):
-            return COLOR_SCHEME[idx]
+            return MM_COLORS[prefix]
     raise ValueError("Unknown MM %s!" % mm_name)
 
 

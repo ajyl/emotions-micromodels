@@ -4,7 +4,6 @@ Functionality around annotating utterances.
 
 from nltk.tokenize import word_tokenize
 from dash import no_update
-from emotions.constants import MITI_THRESHOLD, EMOTION_THRESHOLD
 from emotions.server.utils import get_mm_color, entity
 
 
@@ -41,8 +40,8 @@ def update_utterance_component(annotation_obj, tab_id):
     Update utterance annotation.
     """
     annotation_type = {
-        "utterance-tab-1": "custom",
-        "utterance-tab-2": "miti",
+        "utterance-tab-1": "miti",
+        "utterance-tab-2": "custom",
         "utterance-tab-3": "empathy",
     }[tab_id]
 

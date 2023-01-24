@@ -66,12 +66,19 @@ def _get_segments_sent(utterance) -> List[str]:
 
 
 def _build_query_idx_map(queries, segment_config):
-    all_segments = [
-        _get_segments(query, segment_config["window_size"], segment_config["step_size"])
-        #_get_segments_tree(query, segment_config["window_size"])
-        #_get_segments_sent(query)
-        for query in queries
-    ]
+    if segment_config["window_size"] == "sent":
+        all_segments = [
+            #_get_segments(query, segment_config["window_size"], segment_config["step_size"])
+            #_get_segments_tree(query, segment_config["window_size"])
+            _get_segments_sent(query)
+            for query in queries
+        ]
+    else:
+        all_segments = [
+            _get_segments(query, segment_config["window_size"], segment_config["step_size"])
+            #_get_segments_tree(query, segment_config["window_size"])
+            for query in queries
+        ]
     query_idx_map = []
     for idx, segments in enumerate(all_segments):
         for segment in segments:
