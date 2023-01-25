@@ -3,111 +3,45 @@ Callback methods
 """
 
 import json
-import pickle
-import base64
 import requests
-import pandas as pd
-from nltk.tokenize import word_tokenize
-from dash import html, dcc, callback, Input, Output, State, ALL, ctx, no_update
+from dash import callback, Input, Output, State, ALL, ctx, no_update
 from dash.exceptions import PreventUpdate
-import plotly.express as px
 
 from emotions.constants import (
     FEATURIZER_SERVER,
     THERAPIST,
-    PATIENT,
-    MITI_THRESHOLD,
-    EMOTION_THRESHOLD,
-    EMPATHY_THRESHOLD,
 )
-from emotions.server.utils import get_mm_color, entity, COLOR_SCHEME, MM_TYPES, get_legend_name
-from emotions.server.callbacks.annotate_utterance import (
+from emotions.server.components.analysis import (
+    utterance_component,
+    annotated_utterance_component,
+    micromodel_bar_graph,
+    explanation_graph,
+    emotion_table,
+    empathy_table,
+)
+from emotions.server.callbacks import (
+    build_emotion_analysis_component,
+    build_empathy_analysis_component,
+    build_utterance_component,
+    build_micromodel_component,
+    build_explanation_component,
     update_utterance_component,
-    annotate_utterance,
-    get_annotation_spans,
+    update_global_exp,
+    handle_hover,
 )
-from emotions.server.callbacks.hover import handle_hover
-from emotions.server.init_server import EMOTION_EXPL
-
-
-def update_global_exp(
-    global_exp, explanation_dropdown, emotion_classifications
-):
-    """
-    Update global explanation figure.
-    """
-    visual_idx = None
-    if explanation_dropdown in global_exp.feature_names:
-        visual_idx = global_exp.feature_names.index(explanation_dropdown)
-
-    global_fig = global_exp.visualize(visual_idx)
-    global_fig.update_layout(legend_title="Predictions:")
-
-    if visual_idx is not None:
-        global_fig["data"] = global_fig["data"][:-1]
-        orig_idxs = {_idx: x for _idx, x in enumerate(global_fig["data"])}
-        orig_order = [x["name"] for x in global_fig["data"]]
-        global_fig["data"] = [
-            orig_idxs[orig_order.index(emotion)]
-            for emotion in emotion_classifications
-        ]
-        global_fig["layout"].pop("xaxis")
-        global_fig["layout"].pop("yaxis")
-
-    return [
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        global_fig,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-    ]
 
 
 @callback(
     [
         Output("analysis", "style"),
-        Output("speaker", "children"),
-        Output("utterance", "children"),
+        Output(utterance_component, "children"),
+        Output(annotated_utterance_component, "children"),
+        Output(micromodel_bar_graph, "children"),
+        Output(explanation_graph, "children"),
+        Output(emotion_table, "children"),
+        Output(empathy_table, "children"),
         Output("annotated-utterance-storage", "data"),
-        Output("utterance-tabs", "active_tab"),
-        Output("micromodel-results", "figure"),
-        Output("micromodel-results", "style"),
-        Output("global-explanation", "figure"),
-        Output("global-explanation", "style"),
         Output("emotion-classification-storage", "data"),
-        Output("emotion_1", "children"),
-        Output("emotion_score_1", "children"),
-        Output("emotion_2", "children"),
-        Output("emotion_score_2", "children"),
-        Output("emotion_3", "children"),
-        Output("emotion_score_3", "children"),
-        Output("emotion-classification-table", "style"),
-        Output("emotional_reaction_mm", "children"),
-        Output("interpretation_mm", "children"),
-        Output("exploration_mm", "children"),
-        Output("emotional_reaction_epitome", "children"),
-        Output("interpretation_epitome", "children"),
-        Output("exploration_epitome", "children"),
-        Output("pair", "children"),
     ],
     [
         Input({"type": "dialogue-click", "index": ALL}, "n_clicks"),
@@ -126,7 +60,7 @@ def encode(
     hover_data,
     explanation_dropdown,
     emotion_classification_storage,
-    utterance_tab,
+    active_utterance_tab,
     annotated_utterance_storage,
     utterances,
 ):
@@ -134,21 +68,6 @@ def encode(
     if sum(n_clicks) == 0:
         return [
             {"display": "none"},
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-            no_update,
             no_update,
             no_update,
             no_update,
@@ -170,14 +89,11 @@ def encode(
 
     if triggered_id == "utterance-tabs":
         return update_utterance_component(
-            annotated_utterance_storage, utterance_tab
+            annotated_utterance_storage, active_utterance_tab
         )
 
-    # TODO: Is there a way to avoid another network call
-    # for this case?
     if triggered_id == "global-explanation-feature-dropdown":
         return update_global_exp(
-            EMOTION_EXPL,
             explanation_dropdown,
             emotion_classification_storage,
         )
@@ -197,164 +113,39 @@ def encode(
     )
     response_obj = response.json()
 
+    (
+        annotated_utterance_obj,
+        _utterance_component,
+        annotated_utterance,
+    ) = build_utterance_component(response_obj, speaker, utterance)
+
+    micromodel_component = build_micromodel_component(
+        response_obj["micromodels"], utterance, speaker
+    )
+
     # Emotions - Predictions
     emotion_classifications = response_obj["emotion"]["predictions"][0][0]
-    emotion_scores = response_obj["emotion"]["predictions"][0][1]
 
     # Emotions - Explanations
-    global_exp = EMOTION_EXPL
-    visual_idx = None
-    if explanation_dropdown in global_exp.feature_names:
-        visual_idx = global_exp.feature_names.index(explanation_dropdown)
-
-    global_fig = global_exp.visualize(visual_idx)
-    global_fig.update_layout(legend_title="Predictions:")
-
-    if visual_idx is not None:
-        global_fig["data"] = global_fig["data"][:-1]
-        orig_idxs = {_idx: x for _idx, x in enumerate(global_fig["data"])}
-        orig_order = [x["name"] for x in global_fig["data"]]
-        global_fig["data"] = [
-            orig_idxs[orig_order.index(emotion)]
-            for emotion in emotion_classifications
-        ]
-        global_fig["layout"].pop("xaxis")
-        global_fig["layout"].pop("yaxis")
-
-    # Empathy - MM
-    empathy = [
-        response_obj["empathy"]["empathy_emotional_reactions"],
-        response_obj["empathy"]["empathy_explorations"],
-        response_obj["empathy"]["empathy_interpretations"],
-    ]
-
-    # Empathy - EPITOME
-    #epitome = response_obj["epitome"]
-
-    # MITI (PAIR)
-    pair_results = response_obj.get("pair")
-    if pair_results:
-        score = pair_results["score"][0]
-        pair_pred = "No Reflection"
-        if score >= 0.3:
-            pair_pred = "Simple Reflection"
-        if score >= 0.7:
-            pair_pred = "Complex Reflection"
-        pair_results = {"prediction": pair_pred, "score": score}
-
-    # Micromodels
-    mms = list(response_obj["micromodels"].keys())
-    sorted_mms = []
-    for mm_type in MM_TYPES[::-1]:
-        sorted_mms.extend([
-            mm for mm in mms if mm.startswith(mm_type)
-        ])
-
-    data = []
-    for mm in sorted_mms:
-        if mm not in response_obj["micromodels"]:
-            breakpoint()
-        mm_result = response_obj["micromodels"][mm]
-        data.append(
-            (
-                mm,
-                utterance,
-                max(mm_result["max_score"], 0),
-                mm_result["segment"],
-                get_mm_color(mm),
-                mm_result.get("top_k_scores", [[None]])[0][0],
-            )
-        )
-
-    data = pd.DataFrame(
-        data=data,
-        columns=[
-            "Micromodel",
-            "query",
-            "score",
-            "segment",
-            "color",
-            "similar_seed",
-        ],
-    )
-    fig = px.bar(
-        data_frame=data,
-        x="score",
-        y="Micromodel",
-        color="color",
-        hover_name="Micromodel",
-        hover_data=["Micromodel", "score", "similar_seed"],
-        custom_data=["segment", "query"],
-        orientation="h",
-        height=1500,
-        color_discrete_sequence=COLOR_SCHEME,
-    )
-    fig.update_coloraxes(showscale=False)
-    fig.update_layout(
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.05,
-            xanchor="left",
-            x=0,
-            title="",
-            traceorder="reversed",
-        ),
-    )
-    fig.for_each_trace(lambda t: t.update(name=get_legend_name(t)))
-
-    speaker = speaker[0].upper() + speaker[1:] + ":"
-
-    utterance = " ".join(word_tokenize(utterance))
-    utterance_annotation_obj = {
-        "utterance": utterance,
-        "miti": get_annotation_spans(
-            utterance, response_obj, "miti_", MITI_THRESHOLD
-        ),
-        "custom": get_annotation_spans(
-            utterance, response_obj, "custom_", EMOTION_THRESHOLD
-        ),
-        "empathy": get_annotation_spans(
-            utterance, response_obj, "empathy_", EMPATHY_THRESHOLD
-        ),
-    }
-    annotated_utterance = annotate_utterance(
-        utterance_annotation_obj, "miti"
+    explanation_fig = build_explanation_component(
+        explanation_dropdown, emotion_classifications
     )
 
-    epitome_er = "N/A"
-    epitome_int = "N/A"
-    epitome_exp = "N/A"
-    if "epitome_er" in response_obj["micromodels"]:
-        epitome_er = round(response_obj["micromodels"]["epitome_er"]["max_score"], 3),
-    if "epitome_int" in response_obj["micromodels"]:
-        epitome_int = round(response_obj["micromodels"]["epitome_int"]["max_score"], 3),
-    if "epitome_exp" in response_obj["micromodels"]:
-        epitome_exp = round(response_obj["micromodels"]["epitome_exp"]["max_score"], 3),
+    emotion_analysis_table = build_emotion_analysis_component(
+        response_obj["emotion"]["predictions"][0], explanation_dropdown
+    )
+    empathy_analysis_table = build_empathy_analysis_component(
+        response_obj["micromodels"]
+    )
 
     return [
         {"display": "block"},
-        speaker,
+        _utterance_component,
         annotated_utterance,
-        utterance_annotation_obj,
-        "utterance-tab-1",
-        fig,
-        {"display": "block"},
-        global_fig,
-        {"display": "block"},
+        micromodel_component,
+        explanation_fig,
+        emotion_analysis_table,
+        empathy_analysis_table,
+        annotated_utterance_obj,
         emotion_classifications,
-        emotion_classifications[0],
-        emotion_scores[0],
-        emotion_classifications[1],
-        emotion_scores[1],
-        emotion_classifications[2],
-        emotion_scores[2],
-        {"display": "block"},
-        round(response_obj["micromodels"]["empathy_emotional_reactions"]["max_score"], 3),
-        round(response_obj["micromodels"]["empathy_interpretations"]["max_score"], 3),
-        round(response_obj["micromodels"]["empathy_explorations"]["max_score"], 3),
-        epitome_er,
-        epitome_int,
-        epitome_exp,
-        json.dumps(pair_results, indent=2),
     ]

@@ -35,44 +35,6 @@ def annotate_utterance(annotation_obj, annotation_type):
     return annotated_utterance
 
 
-def update_utterance_component(annotation_obj, tab_id):
-    """
-    Update utterance annotation.
-    """
-    annotation_type = {
-        "utterance-tab-1": "miti",
-        "utterance-tab-2": "custom",
-        "utterance-tab-3": "empathy",
-    }[tab_id]
-
-    return [
-        no_update,
-        no_update,
-        annotate_utterance(annotation_obj, annotation_type),
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-        no_update,
-    ]
-
-
 def get_annotation_spans(utterance, response_obj, prefix, threshold):
     """
     Get emotion spans.

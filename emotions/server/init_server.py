@@ -11,7 +11,11 @@ import base64
 from dash import Dash, html
 import dash_bootstrap_components as dbc
 from interpret.glassbox.ebm.ebm import EBMExplanation
-from emotions.server.components import analysis, dialogue_dropdown, conversation
+from emotions.server.components import (
+    analysis,
+    dialogue_dropdown,
+    conversation,
+)
 from emotions.constants import FEATURIZER_SERVER
 
 
@@ -41,7 +45,9 @@ def init_explanation(server_addr):
     if not response.ok:
         raise RuntimeError("Could not fetch explanation")
 
-    return pickle.loads(base64.b64decode(response.json()["explanations"]["global"]))
+    return pickle.loads(
+        base64.b64decode(response.json()["explanations"]["global"])
+    )
 
 
 try:

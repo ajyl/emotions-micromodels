@@ -173,4 +173,10 @@ MITI_SEEDS = {
         "I don't want to live like this anymore",
         "I want to eat healthier",
     ],
+    "Information": [
+        "Previous studies show that",
+        "There's been a lot of research on",
+        "It is common knowledge that",
+        "According to researchers",
+    ],
 }
