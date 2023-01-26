@@ -45,7 +45,6 @@ from emotions.server.callbacks import (
     ],
     [
         Input({"type": "dialogue-click", "index": ALL}, "n_clicks"),
-        Input("conversation-encoding", "data"),
         Input("micromodel-results", "hoverData"),
         Input("global-explanation-feature-dropdown", "value"),
         Input("emotion-classification-storage", "data"),
@@ -58,7 +57,6 @@ from emotions.server.callbacks import (
 )
 def encode(
     n_clicks,
-    conversation_encoding,
     hover_data,
     explanation_dropdown,
     emotion_classification_storage,
@@ -104,20 +102,29 @@ def encode(
     utterance_obj = utterances[idx]
     utterance = utterance_obj["utterance"]
     speaker = utterance_obj["speaker"]
-    utterance_encoding = conversation_encoding[idx]["results"]
+
+    prev_utterance = None
+    if speaker == THERAPIST and idx > 0:
+        prev_utterance = utterances[idx - 1]["utterance"]
+
+    response = requests.post(
+        FEATURIZER_SERVER + "/encode",
+        json={"response": utterance, "prompt": prev_utterance},
+    )
+    response_obj = response.json()
 
     (
         annotated_utterance_obj,
         _utterance_component,
         annotated_utterance,
-    ) = build_utterance_component(utterance_encoding, speaker, utterance)
+    ) = build_utterance_component(response_obj, speaker, utterance)
 
     micromodel_component = build_micromodel_component(
-        utterance_encoding["micromodels"], utterance, speaker
+        response_obj["micromodels"], utterance, speaker
     )
 
     # Emotions - Predictions
-    emotion_classifications = utterance_encoding["emotion"]["predictions"][0][0]
+    emotion_classifications = response_obj["emotion"]["predictions"][0][0]
 
     # Emotions - Explanations
     explanation_fig = build_explanation_component(
@@ -125,10 +132,10 @@ def encode(
     )
 
     emotion_analysis_table = build_emotion_analysis_component(
-        utterance_encoding["emotion"]["predictions"], explanation_dropdown
+        response_obj["emotion"]["predictions"][0], explanation_dropdown
     )
     empathy_analysis_table = build_empathy_analysis_component(
-        utterance_encoding["micromodels"]
+        response_obj["micromodels"]
     )
 
     return [

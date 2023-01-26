@@ -30,7 +30,7 @@ from emotions.backend.EPITOME.empathy_classifier import EmpathyClassifier
 from emotions.backend.PAIR.cross_scorer_model import CrossScorerCrossEncoder
 from emotions.seeds.custom_emotions import ED_SEEDS
 from emotions.seeds.miti_codes import MITI_SEEDS
-from emotions.constants import MITI_THRESHOLD
+from emotions.constants import MITI_THRESHOLD, THERAPIST
 
 
 MM_HOME = os.environ.get("MM_HOME")
@@ -456,10 +456,7 @@ class Encoder:
 
     def run_epitome_empty(self):
         return {
-            epitome: {
-                "probabilities": [0, 0, 0],
-                "rationale": ""
-            }
+            epitome: {"probabilities": [0, 0, 0], "rationale": ""}
             for epitome in ["epitome_er", "epitome_int", "epitome_exp"]
         }
 
@@ -512,7 +509,7 @@ class Encoder:
             empathy_features
         )
 
-        emotion_preds = self.run_emotion_clf_features(emotion_scores)
+        emotion_preds = self.run_emotion_clf_features(emotion_scores)[0]
         return {
             "emotion": {
                 "predictions": emotion_preds,
@@ -528,6 +525,29 @@ class Encoder:
     def encode(self, utterance, prev_utterance=None):
         """
         Encode a single dialogue turn.
+        {
+            "emotion": {
+                "predictions": List[
+                    List[str] (emotion predictions),
+                    List[float] (emotion probabilities)
+                ]
+            },
+            "empathy": {
+                "empathy_emotional_reactions": [
+                    List[0, 1], (predictions, will always be [0, 1]?
+                    List[float], (probabilities, will always have length 2)
+                ],
+                ...
+            },
+            "micromodels": {
+                mm_name: {
+                    "max_score": float,
+                    "top_k_scores": List[Tuple[str (segment), float (score)]],
+                    "segment": str
+                },
+                ...
+            }
+        }
         """
         response_encoding = self.encode_utterance(utterance)
 
@@ -542,12 +562,13 @@ class Encoder:
             }
 
         response_encoding["micromodels"]["pair"] = {
-            "max_score": 0, "segment": ""
+            "max_score": 0,
+            "segment": "",
         }
         if self.pair and self.pair_tokenizer and prev_utterance is not None:
             response_encoding["micromodels"]["pair"] = {
                 "max_score": self.run_pair(prev_utterance, utterance)[0],
-                "segment": ""
+                "segment": "",
             }
 
         return response_encoding
@@ -556,12 +577,14 @@ class Encoder:
         """
         Encode a single conversation
         """
+        convo = [x for x in convo if x["utterance"] != ""]
         utts = [utt["utterance"] for utt in convo if utt["utterance"] != ""]
         bert_results = self.featurizer.run_bert(utts)
 
         emotion_features = None
         for utt_idx, _results in bert_results.items():
-            _results["convo"] = convo[utt_idx]
+            _results["utterance"] = convo[utt_idx]["utterance"]
+            _results["speaker"] = convo[utt_idx]["speaker"]
             emotion_scores = [
                 _results["results"][mm]["max_score"] for mm in self.ed_mms
             ]
@@ -579,18 +602,65 @@ class Encoder:
             empathy_features
         )
 
-        for utt_idx, _results in bert_results.items():
-            try:
-                _results["classifications"] = {
-                    "emotions": emotion_preds[utt_idx],
-                    "empathy_emotional_reactions": emp_er[utt_idx],
-                    "empathy_explorations": emp_exp[utt_idx],
-                    "empathy_interpretations": emp_int[utt_idx],
-                }
-            except:
-                breakpoint()
+        encoded = []
+        assert len(bert_results) == len(emotion_preds)
+        assert len(bert_results) == len(emp_er)
 
-        return bert_results
+        for utt_idx, _results in bert_results.items():
+
+            utterance = _results["utterance"]
+            speaker = _results["speaker"]
+
+            utterance_encoding = {
+                "utterance": utterance,
+                "speaker": speaker,
+                "results": {
+                    "emotion": {
+                        "predictions": emotion_preds[utt_idx],
+                    },
+                    "empathy": {},
+                    "micromodels": _results["results"],
+                },
+            }
+            for empathy_type in [
+                ("emotional_reactions", emp_er),
+                ("interpretations", emp_int),
+                ("explorations", emp_exp),
+            ]:
+                utterance_encoding["results"]["empathy"].update(
+                    {"empathy_%s" % empathy_type[0]: empathy_type[1]}
+                )
+
+            epitome_results = self.run_epitome_empty()
+            if self.epitome and speaker == THERAPIST and utt_idx > 0:
+                prev_utterance = bert_results[utt_idx - 1]["utterance"]
+                epitome_results = self.run_epitome(prev_utterance, utterance)
+
+            for epitome_type, _results in epitome_results.items():
+                utterance_encoding["results"]["micromodels"][epitome_type] = {
+                    "max_score": _results["probabilities"][1]
+                    + _results["probabilities"][2],
+                    "segment": _results["rationale"],
+                }
+
+            utterance_encoding["results"]["micromodels"]["pair"] = {
+                "max_score": 0,
+                "segment": "",
+            }
+            if (
+                self.pair
+                and self.pair_tokenizer
+                and speaker == THERAPIST
+                and utt_idx > 0
+            ):
+                prev_utterance = bert_results[utt_idx - 1]["utterance"]
+                utterance_encoding["results"]["micromodels"]["pair"] = {
+                    "max_score": self.run_pair(prev_utterance, utterance)[0],
+                    "segment": "",
+                }
+
+            encoded.append(utterance_encoding)
+        return encoded
 
     def get_explain(self):
         """
@@ -600,9 +670,7 @@ class Encoder:
         if self.ed_model:
             explanation = self.ed_model.explain_global()
 
-        return {
-            "explanations": {"global": explanation}
-        }
+        return {"explanations": {"global": explanation}}
 
 
 def load_encoder(
@@ -664,6 +732,21 @@ def main():
     response = "You almost got into a car accident."
 
     testing2 = encoder.encode(prompt, response)
+
+    testing3 = encoder.encode_convo(
+        [
+            {
+                "utterance": "This is a test",
+                "speaker": THERAPIST,
+            },
+            {
+                "utterance": "I almost got into a car accident.",
+                "speaker": "z",
+            },
+            {"utterance": response, "speaker": THERAPIST},
+        ]
+    )
+    breakpoint()
 
     # result = encoder.encode("well so I 've been working with the weight management clinic and I just when I found out that this was an opportunity I thought why not use this as another resource to help me lose weight")
     # test_utterance = "well so I 've been working with the weight management clinic and I just when I found out that this was an opportunity I thought why not use this as another resource to help me lose weight"

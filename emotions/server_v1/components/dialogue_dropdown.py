@@ -5,7 +5,8 @@ Components for dialogue.
 import os
 import json
 from collections import OrderedDict
-from dash import html, dcc
+from dash import html, dcc, callback, Input, Output
+from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from emotions.constants import THERAPIST, PATIENT
 
@@ -70,7 +71,8 @@ def textbox(text, box, idx):
     style = {
         "max-width": "55%",
         "width": "max-content",
-        "border-radius": "16px",
+        # "padding": "1px 1px",
+        # "border-radius": "6px",
     }
 
     if box == PATIENT:
@@ -105,3 +107,20 @@ def textbox(text, box, idx):
         color=color,
         inverse=inverse,
     )
+
+
+@callback(
+    Output("display-conversation", "children"),
+    Input("mi-dropdown", "value"),
+)
+def display_dialogue(dialogue_id):
+    """
+    Display dialogue.
+    """
+    if dialogue_id is None:
+        raise PreventUpdate
+
+    return [
+        textbox(utt_obj["utterance"], utt_obj["speaker"], idx)
+        for idx, utt_obj in enumerate(mi_data[dialogue_id])
+    ]

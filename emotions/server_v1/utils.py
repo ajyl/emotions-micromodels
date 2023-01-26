@@ -19,7 +19,8 @@ MM_TYPES = [
 ]
 
 MM_COLORS = {
-    mm_name: COLOR_SCHEME[idx] for idx, mm_name in enumerate(MM_TYPES[::-1])
+    mm_name: COLOR_SCHEME[idx]
+    for idx, mm_name in enumerate(MM_TYPES[::-1])
 }
 
 LEGEND_NAMES = {
@@ -51,6 +52,10 @@ def get_legend_name(bar_trace):
         if mm_name.startswith(prefix):
             return LEGEND_NAMES[prefix]
     raise ValueError("Unknown MM %s!" % mm_name)
+
+
+
+
 
 
 def entname(name):
@@ -86,3 +91,5 @@ def entity(text, entity_name, color):
     assert isinstance(text, str)
     text = [entname(entity_name)] + [text]
     return entbox(text, color)
+
+

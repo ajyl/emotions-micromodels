@@ -2,7 +2,6 @@
 Initialization functions for server.
 """
 
-import os
 import requests
 import json
 import pickle
@@ -16,12 +15,8 @@ from emotions.server.components import (
     analysis,
     dialogue_dropdown,
     conversation,
-    summary,
-    search_result_component,
-    search_bar_component,
 )
 from emotions.constants import FEATURIZER_SERVER
-from emotions.server.cache_utils import load_cache
 
 
 def init_featurizer_server(server_addr):
@@ -62,30 +57,13 @@ except RuntimeError:
 
 
 EMOTION_EXPL = init_explanation(FEATURIZER_SERVER)
-cache_filepath = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)),
-    "cache.json"
-)
-CACHE = load_cache(cache_filepath)
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = dbc.Container(
     [
         html.Div([html.H1(children="Welcome!")]),
         dialogue_dropdown,
-        search_bar_component,
-        dbc.Row(
-            [
-                dbc.Col(conversation, width=4),
-                dbc.Col(
-                    [
-                        dbc.Row(summary),
-                        dbc.Row(search_result_component),
-                    ],
-                    width=8)
-            ]
-        ),
-        dbc.Row([dbc.Col(analysis, width=12)]),
+        dbc.Row([dbc.Col(conversation, width=4), dbc.Col(analysis, width=8)]),
     ],
     fluid=True,
 )

@@ -71,8 +71,15 @@ def init_cache(cache_filepath=None):
         return cache
 
     mi_data = init_anno_mi_data()
-    for convo_id, dialogue in tqdm(mi_data.items()):
-        cache[convo_id] = encoder.encode_convo(dialogue)
+    for dialogue in tqdm(mi_data.values()):
+        for idx, utt_obj in enumerate(dialogue):
+            if utt_obj["speaker"] == THERAPIST and idx > 0:
+                prompt = dialogue[idx-1]["utterance"]
+                response = utt_obj["utterance"]
+
+                cache[utt_obj["utterance"]] = encoder.encode(response, prompt)
+            else:
+                cache[utt_obj["utterance"]] = encoder.encode_utterance(utt_obj["utterance"])
 
     with open(cache_filepath, "w") as file_p:
         json.dump(cache, file_p, cls=MyEncoder)
@@ -102,17 +109,6 @@ def encode():
     response = request.json["response"]
     result = encoder.encode(response, prompt)
     return json.dumps(result, cls=MyEncoder)
-
-
-@app.route("/encode_convo", methods=["POST"])
-def encode_convo():
-    convo_id = request.json["convo_id"]
-    if convo_id in cache:
-        return json.dumps(cache[convo_id], cls=MyEncoder)
-
-    convo = request.json["convo"]
-    cache[convo_id] = encoder.encode_convo(convo)
-    return json.dumps(cache[convo_id], cls=MyEncoder)
 
 
 @app.route("/explain", methods=["GET", "POST"])
