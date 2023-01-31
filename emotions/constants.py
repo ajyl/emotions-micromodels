@@ -15,3 +15,5 @@ COG_DIST_THRESHOLD = 0.7
 
 THERAPIST = "therapist"
 PATIENT = "patient"
+SPEAKER = "speaker"
+UTTERANCE = "utterance"
