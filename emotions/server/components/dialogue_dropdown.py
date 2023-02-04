@@ -62,7 +62,7 @@ dialogue_dropdown = html.Div(
 )
 
 
-def textbox(text, box, idx):
+def textbox(text, box, idx, component_id):
     """
     Textbox component.
     """
@@ -94,7 +94,7 @@ def textbox(text, box, idx):
         [
             dbc.Button(
                 text,
-                id={"type": "dialogue-click", "index": idx},
+                id={"type": component_id, "index": idx},
                 n_clicks=0,
                 color=color,
                 value={"speaker": box, "utterance": text},

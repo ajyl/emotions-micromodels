@@ -7,11 +7,11 @@ from typing_inspect import get_origin
 from typing_extensions import Literal
 import operator as op
 from emotions.constants import THERAPIST, PATIENT, SPEAKER, UTTERANCE
+from emotions.config import MM_TYPES as MM_ARGS
 
 
 # Type Definitions.
 TARGET_ARGS = [SPEAKER]
-MM_ARGS = ["mm_a", "mm_b", "mm_c"]
 STR_ARGS = [THERAPIST, PATIENT]
 
 # Exp_Operator = str
@@ -37,7 +37,9 @@ def expression_operators():
                     )
                 target_arg = arg
 
-            elif arg in MM_ARGS:
+            elif isinstance(arg, str) and any(
+                arg.startswith(mm_prefix) for mm_prefix in MM_ARGS
+            ):
                 if mm_arg is not None:
                     raise ValueError(
                         "Redundant values for mm arg: %s, %s." % (mm_arg, arg)
@@ -90,8 +92,11 @@ def expression_operators():
     def get_values(data, target_arg):
         if target_arg in TARGET_ARGS:
             return [x["speaker"] for x in data]
-        if target_arg in MM_ARGS:
-            return [x["micromodels"][target_arg] for x in data]
+        if any(target_arg.startswith(mm_prefix) for mm_prefix in MM_ARGS):
+            return [
+                x["results"]["micromodels"][target_arg]["max_score"]
+                for x in data
+            ]
         raise ValueError(
             "How did we get here? Invalid instance for target_arg: %s."
             % type(target_arg)
@@ -132,7 +137,7 @@ def expression_operators():
                 raise ValueError(
                     "Invalid filter_arg for 'equal' operator: %s" % filter_arg
                 )
-        if target_arg in MM_ARGS:
+        if any(target_arg.startswith(mm_prefix) for mm_prefix in MM_ARGS):
             if not isinstance(filter_arg, float):
                 raise ValueError(
                     "Invalid filter_arg for 'equal' operator: %s" % filter_arg
@@ -157,11 +162,15 @@ def expression_operators():
             raise ValueError("Empty list of args.")
         ret = _args[0]
         if not isinstance(ret, list):
-            raise ValueError("First argument is not a valid type, should be a list.")
+            raise ValueError(
+                "First argument is not a valid type, should be a list."
+            )
 
         for _arg in _args[1:]:
             if not isinstance(_arg, list):
-                raise ValueError("Argument is not a valid type, should be a list.")
+                raise ValueError(
+                    "Argument is not a valid type, should be a list."
+                )
             ret = [x for x in ret if x in _arg]
         return ret
 
@@ -178,7 +187,7 @@ def expression_operators():
     return env
 
 
-ops = expression_operators()
+SEARCH_OPS = expression_operators()
 
 
 def resolve(query):
@@ -235,17 +244,17 @@ def parse_query(query):
     return read_from_tokens(tokens)
 
 
-def evaluate(exp, env, data):
+def evaluate(exp, data):
     """
     Evaluate an expression.
     """
     if isinstance(exp, str) or isinstance(exp, float):
         if exp in QUERY_OPERATORS + EXP_OPERATORS:
-            return env[exp]
+            return SEARCH_OPS[exp]
         return exp
 
-    operator = evaluate(exp[0], env, data)
-    _args = [evaluate(arg, env, data) for arg in exp[1:]]
+    operator = evaluate(exp[0], data)
+    _args = [evaluate(arg, data) for arg in exp[1:]]
     return operator(data, _args)
 
 
@@ -255,84 +264,104 @@ if __name__ == "__main__":
         {
             "utterance": "testing 1",
             "speaker": THERAPIST,
-            "micromodels": {
-                "mm_a": 0.7,
-                "mm_b": 0.6,
-                "mm_c": 0.5,
-                "mm_d": 0.4,
-                "mm_e": 0.3,
-                "mm_f": 0.2,
+            "results": {
+                "micromodels": {
+                    "miti_a": 0.7,
+                    "miti_b": 0.6,
+                    "empathy_a": 0.5,
+                    "custom_a": 0.4,
+                    "emotion_a": 0.3,
+                    "cog_dist_a": 0.2,
+                }
             },
         },
         {
             "utterance": "testing 2",
             "speaker": PATIENT,
-            "micromodels": {
-                "mm_a": 0.9,
-                "mm_b": 0.8,
-                "mm_c": 0.7,
-                "mm_d": 0.1,
-                "mm_e": 0.2,
-                "mm_f": 0.3,
+            "results": {
+                "micromodels": {
+                    "miti_a": 0.9,
+                    "miti_b": 0.8,
+                    "empathy_a": 0.7,
+                    "custom_a": 0.1,
+                    "emotion_a": 0.2,
+                    "cog_dist_a": 0.3,
+                },
             },
         },
         {
             "utterance": "testing 3",
             "speaker": THERAPIST,
-            "micromodels": {
-                "mm_a": 0.1,
-                "mm_b": 0.2,
-                "mm_c": 0.1,
-                "mm_d": 0.2,
-                "mm_e": 0.1,
-                "mm_f": 0.2,
+            "results": {
+                "micromodels": {
+                    "miti_a": 0.1,
+                    "miti_b": 0.2,
+                    "empathy_a": 0.1,
+                    "custom_a": 0.2,
+                    "emotion_a": 0.1,
+                    "cog_dist_a": 0.2,
+                },
             },
         },
         {
             "utterance": "testing 4",
             "speaker": PATIENT,
-            "micromodels": {
-                "mm_a": 0.5,
-                "mm_b": 0.7,
-                "mm_c": 0.2,
-                "mm_d": 0.5,
-                "mm_e": 0.7,
-                "mm_f": 0.2,
+            "results": {
+                "micromodels": {
+                    "miti_a": 0.5,
+                    "miti_b": 0.7,
+                    "empathy_a": 0.2,
+                    "custom_a": 0.5,
+                    "emotion_a": 0.7,
+                    "cog_dist_a": 0.2,
+                },
             },
         },
         {
             "utterance": "testing 5",
             "speaker": THERAPIST,
-            "micromodels": {
-                "mm_a": 0.7,
-                "mm_b": 0.8,
-                "mm_c": 0.9,
-                "mm_d": 0.7,
-                "mm_e": 0.8,
-                "mm_f": 0.9,
+            "results": {
+                "micromodels": {
+                    "miti_a": 0.7,
+                    "miti_b": 0.8,
+                    "empathy_a": 0.9,
+                    "custom_a": 0.7,
+                    "emotion_a": 0.8,
+                    "cog_dist_a": 0.9,
+                },
             },
         },
     ]
     # parsed_query = parse_query("((== speaker therapist) or (utterance == this))")
-    parsed_query = parse_query("> mm_a 0.5")
-    x = evaluate(parsed_query, ops, test_data)
+    parsed_query = parse_query("> miti_a 0.5")
+    x = evaluate(parsed_query, test_data)
     assert x == [0, 1, 4]
 
     parsed_query = parse_query("== speaker " + THERAPIST)
-    y = evaluate(parsed_query, ops, test_data)
+    y = evaluate(parsed_query, test_data)
     assert y == [0, 2, 4]
 
-    parsed_query = parse_query("(or (== speaker %s) (> mm_a 0.5))" % THERAPIST)
-    assert parsed_query == ["or", ["==", "speaker", THERAPIST], [">", "mm_a", 0.5]]
+    parsed_query = parse_query(
+        "(or (== speaker %s) (> miti_a 0.5))" % THERAPIST
+    )
+    assert parsed_query == [
+        "or",
+        ["==", "speaker", THERAPIST],
+        [">", "miti_a", 0.5],
+    ]
 
-    z = evaluate(parsed_query, ops, test_data)
+    z = evaluate(parsed_query, test_data)
     assert z == [0, 1, 2, 4]
 
-    parsed_query = parse_query("(and (== speaker %s) (> mm_a 0.5))" % THERAPIST)
-    zz = evaluate(parsed_query, ops, test_data)
+    parsed_query = parse_query(
+        "(and (== speaker %s) (> miti_a 0.5))" % THERAPIST
+    )
+    zz = evaluate(parsed_query, test_data)
     assert zz == [0, 4]
 
-    parsed_query = parse_query("(or (and (== speaker %s) (> mm_a 0.5)) (<= mm_b 0.5))" % THERAPIST)
-    zz = evaluate(parsed_query, ops, test_data)
+    parsed_query = parse_query(
+        "(or (and (== speaker %s) (> miti_a 0.5)) (<= miti_b 0.5))" % THERAPIST
+    )
+    zz = evaluate(parsed_query, test_data)
     assert zz == [0, 2, 4]
     print("Hmm...")

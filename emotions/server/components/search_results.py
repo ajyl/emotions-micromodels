@@ -12,10 +12,14 @@ search_results_display = html.Div(
     id="search-result-display-component",
 )
 search_result_idxs = dcc.Store(id="search-results-storage")
+current_search_idx_ptr = dcc.Store(id="current-result-idx-pointer")
+current_search_idx = dcc.Store(id="current-result-idx-storage")
 
 search_result_component = html.Div(
     [
         search_result_idxs,
+        current_search_idx_ptr,
+        current_search_idx,
         search_results_display,
         html.Div(
             [

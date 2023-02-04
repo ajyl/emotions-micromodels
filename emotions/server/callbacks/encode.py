@@ -19,6 +19,9 @@ from emotions.server.components.analysis import (
     emotion_table,
     empathy_table,
 )
+from emotions.server.components import (
+    current_search_idx,
+)
 from emotions.server.callbacks import (
     build_emotion_analysis_component,
     build_empathy_analysis_component,
@@ -44,46 +47,53 @@ from emotions.server.callbacks import (
         Output("emotion-classification-storage", "data"),
     ],
     [
-        Input({"type": "dialogue-click", "index": ALL}, "n_clicks"),
         Input("conversation-encoding", "data"),
         Input("micromodel-results", "hoverData"),
         Input("global-explanation-feature-dropdown", "value"),
         Input("emotion-classification-storage", "data"),
         Input("utterance-tabs", "active_tab"),
         Input("annotated-utterance-storage", "data"),
+        Input("current-result-idx-storage", "data"),
+        Input({"type": "dialogue-click", "index": ALL}, "n_clicks"),
     ],
     [
         State({"type": "dialogue-click", "index": ALL}, "value"),
     ],
+    prevent_initial_call=True,
 )
 def encode(
-    n_clicks,
     conversation_encoding,
     hover_data,
     explanation_dropdown,
     emotion_classification_storage,
     active_utterance_tab,
     annotated_utterance_storage,
+    search_idx,
+    n_clicks,
     utterances,
 ):
 
-    if sum(n_clicks) == 0:
-        return [
-            {"display": "none"},
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-            no_update,
-        ]
-
     triggered_id = ctx.triggered_id
-    print(triggered_id)
+    print("Encode; Triggered_id:", triggered_id)
+    print("Encode: triggered_prop_ids:", ctx.triggered_prop_ids)
+    #print(n_clicks)
 
+    #if sum(n_clicks) == 0:
+    #    return [
+    #        {"display": "none"},
+    #        no_update,
+    #        no_update,
+    #        no_update,
+    #        no_update,
+    #        no_update,
+    #        no_update,
+    #        no_update,
+    #        no_update,
+    #    ]
     if triggered_id is None:
+        raise PreventUpdate
+
+    if triggered_id == "conversation-encoding":
         raise PreventUpdate
 
     if triggered_id == "micromodel-results":
@@ -100,7 +110,11 @@ def encode(
             emotion_classification_storage,
         )
 
-    idx = ctx.triggered_id["index"]
+    if triggered_id == "current-result-idx-storage":
+        idx = search_idx
+    else:
+        idx = ctx.triggered_id["index"]
+
     utterance_obj = utterances[idx]
     utterance = utterance_obj["utterance"]
     speaker = utterance_obj["speaker"]

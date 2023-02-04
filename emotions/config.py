@@ -16,6 +16,16 @@ from emotions.seeds import (
 )
 
 
+MM_TYPES = [
+    "miti",
+    "pair",
+    "empathy",
+    "epitome",
+    "custom",
+    "emotion",
+    "cog_dist",
+]
+
 EMP_TASKS = ["emotional_reactions", "explorations", "interpretations"]
 EMP_MMS = [
     "empathy_emotional_reactions",

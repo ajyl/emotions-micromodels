@@ -4,19 +4,10 @@ Utility functions.
 
 from dash import html
 import plotly.express as px
+from emotions.config import MM_TYPES
 
 COLOR_SCHEME = px.colors.qualitative.Set2
 
-
-MM_TYPES = [
-    "miti",
-    "pair",
-    "empathy",
-    "epitome",
-    "custom",
-    "emotion",
-    "cog_dist",
-]
 
 MM_COLORS = {
     mm_name: COLOR_SCHEME[idx] for idx, mm_name in enumerate(MM_TYPES[::-1])

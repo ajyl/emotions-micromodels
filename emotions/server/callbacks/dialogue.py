@@ -22,10 +22,11 @@ def display_dialogue(dialogue_id):
     """
     Display dialogue.
     """
+    print("DISPLAY_DIALOGUE CALLED.")
+    print("DIALOGUE_ID:", dialogue_id)
     if dialogue_id is None:
         raise PreventUpdate
 
-    breakpoint()
     if dialogue_id in CACHE:
         dialogue_encoding = CACHE[dialogue_id]
 
@@ -37,7 +38,7 @@ def display_dialogue(dialogue_id):
         dialogue_encoding = response.json()
     return [
         [
-            textbox(utt_obj["utterance"], utt_obj["speaker"], idx)
+            textbox(utt_obj["utterance"], utt_obj["speaker"], idx, "dialogue-click")
             for idx, utt_obj in enumerate(mi_data[dialogue_id])
         ],
         dialogue_encoding,

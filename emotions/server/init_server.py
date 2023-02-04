@@ -66,7 +66,8 @@ cache_filepath = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
     "cache.json"
 )
-CACHE = load_cache(cache_filepath)
+#CACHE = load_cache(cache_filepath)
+CACHE = {}
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = dbc.Container(
