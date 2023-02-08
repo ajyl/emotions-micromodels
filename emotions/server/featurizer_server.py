@@ -26,8 +26,7 @@ epitome_exp_classifier = os.path.join(MODELS_DIR, "EPITOME_EXP.pth")
 epitome_int_classifier = os.path.join(MODELS_DIR, "EPITOME_INT.pth")
 
 cache_filepath = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)),
-    "cache.json"
+    os.path.dirname(os.path.realpath(__file__)), "cache.json"
 )
 
 pair_path = os.path.join(MODELS_DIR, "pair.pth")
@@ -61,11 +60,10 @@ class MyEncoder(json.JSONEncoder):
             return super(MyEncoder, self).default(obj)
 
 
-
-def init_cache(cache_filepath=None):
+def init_cache(cache_filepath, force_rebuild=False):
     print("Initializing cache...")
     cache = {}
-    if cache_filepath and os.path.isfile(cache_filepath):
+    if not force_rebuild and os.path.isfile(cache_filepath):
         with open(cache_filepath, "r") as file_p:
             cache = json.load(file_p)
         return cache
@@ -79,10 +77,10 @@ def init_cache(cache_filepath=None):
     return cache
 
 
-cache = init_cache(cache_filepath)
-breakpoint()
+cache = init_cache(cache_filepath, True)
 
 app = Flask(__name__)
+
 
 @app.route("/encode_utterance", methods=["POST"])
 def encode_utterance():
@@ -108,6 +106,18 @@ def encode():
 def encode_convo():
     convo_id = request.json["convo_id"]
     if convo_id in cache:
+        # Hack:
+        for utt_obj in cache[convo_id]:
+            mm_obj = utt_obj["results"]["micromodels"]
+            mm_obj["epitome_emotional_reactions"] = mm_obj.pop(
+                "epitome_er", {"max_score": 0, "segment": ""}
+            )
+            mm_obj["epitome_interpretations"] = mm_obj.pop(
+                "epitome_int", {"max_score": 0, "segment": ""}
+            )
+            mm_obj["epitome_explorations"] = mm_obj.pop(
+                "epitome_exp", {"max_score": 0, "segment": ""}
+            )
         return json.dumps(cache[convo_id], cls=MyEncoder)
 
     convo = request.json["convo"]

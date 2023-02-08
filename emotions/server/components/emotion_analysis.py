@@ -4,12 +4,12 @@ Components for Emotion Classification.
 
 from dash import html, dcc
 import dash_bootstrap_components as dbc
-from emotions.config import ED_EMOTIONS
+from emotions.config import EMOTIONS
 
 
 def get_emotion_mms():
-    return ["emotion_%s" % emotion for emotion in ED_EMOTIONS] + [
-        "custom_%s" % emotion for emotion in ED_EMOTIONS
+    return ["emotion_%s" % emotion for emotion in EMOTIONS] + [
+        "custom_%s" % emotion for emotion in EMOTIONS
     ]
 
 

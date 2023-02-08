@@ -7,7 +7,7 @@ from dash import html, dcc
 def build_empathy_analysis_component(micromodel_results):
     """
     micromodel_results: {
-        "epitome_er": {"max_score": float},
+        "epitome_emotional_reactions": {"max_score": float},
         ...
         "empathy_emotional_reactions": {"max_score": float},
         ...
@@ -25,9 +25,9 @@ def build_empathy_analysis_component(micromodel_results):
         round(micromodel_results["empathy_explorations"]["max_score"], 3),
     )
 
-    epitome_er = (round(micromodel_results["epitome_er"]["max_score"], 3),)
-    epitome_int = (round(micromodel_results["epitome_int"]["max_score"], 3),)
-    epitome_exp = (round(micromodel_results["epitome_exp"]["max_score"], 3),)
+    epitome_er = (round(micromodel_results["epitome_emotional_reactions"]["max_score"], 3),)
+    epitome_int = (round(micromodel_results["epitome_interpretations"]["max_score"], 3),)
+    epitome_exp = (round(micromodel_results["epitome_explorations"]["max_score"], 3),)
     return [
         html.Thead(
             html.Tr(

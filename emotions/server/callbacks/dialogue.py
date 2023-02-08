@@ -22,8 +22,6 @@ def display_dialogue(dialogue_id):
     """
     Display dialogue.
     """
-    print("DISPLAY_DIALOGUE CALLED.")
-    print("DIALOGUE_ID:", dialogue_id)
     if dialogue_id is None:
         raise PreventUpdate
 

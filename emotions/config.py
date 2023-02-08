@@ -13,6 +13,7 @@ from emotions.seeds import (
     SELF_BLAME,
     SUBSTANCE_ABUSE,
     SUICIDAL,
+    MITI_SEEDS
 )
 
 
@@ -26,7 +27,9 @@ MM_TYPES = [
     "cog_dist",
 ]
 
-EMP_TASKS = ["emotional_reactions", "explorations", "interpretations"]
+MITI_CODES = [x.lower() for x in MITI_SEEDS.keys()]
+
+EMPATHY_COMMUNICATION_MECHANISMS = ["emotional_reactions", "explorations", "interpretations"]
 EMP_MMS = [
     "empathy_emotional_reactions",
     "empathy_explorations",
@@ -40,12 +43,9 @@ BUILD_EMPATHY_MM = True
 INCLUDE_ED_EMOTIONS = True
 BUILD_ED_EMOTION_MMS = True
 
-INCLUDE_GO_EMOTIONS = False
-BUILD_GO_EMOTION_MMS = False
-
 BUILD_COG_DIST_MMS = True
 
-ED_EMOTIONS = [
+EMOTIONS = [
     "afraid",
     "angry",
     "annoyed",
@@ -74,42 +74,10 @@ ED_EMOTIONS = [
     "prepared",
     "proud",
     "sad",
-    "sentimental",
     "surprised",
-    "terrified",
     "trusting",
 ]
 
-
-GO_EMOTIONS = [
-    "admiration",
-    "amusement",
-    "anger",
-    "annoyance",
-    "approval",
-    "caring",
-    "confusion",
-    "curiosity",
-    "desire",
-    "disappointment",
-    "disapproval",
-    "disgust",
-    "embarrassment",
-    "excitement",
-    "fear",
-    "gratitude",
-    "grief",
-    "joy",
-    "love",
-    "nervousness",
-    "optimism",
-    "pride",
-    "realization",
-    "relief",
-    "remorse",
-    "sadness",
-    "surprise",
-]
 
 
 COG_DISTS = {
@@ -181,32 +149,14 @@ EMP_CONFIGS_MERGED = [
         },
         "build": BUILD_EMPATHY_MM,
     }
-    for task in EMP_TASKS
+    for task in EMPATHY_COMMUNICATION_MECHANISMS
 ]
 
-
-def add_go_emotions(configs):
-    """ Add GoEmotion micromodels """
-    for emotion in GO_EMOTIONS:
-        filepath = os.path.join(mm_model_dir, "go_%s.json" % emotion)
-        setup_args = load_mm_config(filepath)
-        setup_args["threshold"] = 0.6
-        setup_args["infer_config"] = {
-            "segment_config": {"window_size": 999, "step_size": 10}
-        }
-        config = {
-            "name": "go_emotion_%s" % emotion,
-            "model_type": "bert_query",
-            "setup_args": setup_args,
-            "model_path": os.path.join(mm_model_dir, "go_%s" % emotion),
-            "build": BUILD_GO_EMOTION_MMS,
-        }
-        configs.append(config)
 
 
 def add_ed_emotions(configs):
     """ Add emotion micromodels """
-    for emotion in ED_EMOTIONS:
+    for emotion in EMOTIONS:
         filepath = os.path.join(ed_seed_dir, "ed_%s.json" % emotion)
         setup_args = load_mm_config(filepath)
         setup_args["threshold"] = 0.6
@@ -252,7 +202,3 @@ if INCLUDE_EMPATHY:
 # ED EMOTIONs
 if INCLUDE_ED_EMOTIONS:
     add_ed_emotions(MM_CONFIG)
-
-# GO EMOTIONS
-if INCLUDE_GO_EMOTIONS:
-    add_go_emotions(MM_CONFIG)

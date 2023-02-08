@@ -16,7 +16,7 @@ from transformers import AutoTokenizer, AutoModel
 from emotions.config import (
     add_ed_emotions,
     EMP_CONFIGS,
-    EMP_TASKS,
+    EMPATHY_COMMUNICATION_MECHANISMS,
     EMP_MMS,
     COG_DISTS,
 )
@@ -66,7 +66,7 @@ def _featurize_emp(featurizer, emp_data):
                 "level": emp_data[_query_idx][task]["level"],
                 "rationales": emp_data[_query_idx][task]["rationales"],
             }
-            for task in EMP_TASKS
+            for task in EMPATHY_COMMUNICATION_MECHANISMS
         }
 
     labels = []
@@ -83,7 +83,7 @@ def _featurize_emp(featurizer, emp_data):
             labels.append(
                 [
                     1 if _labels[task]["level"] != "0" else 0
-                    for task in EMP_TASKS
+                    for task in EMPATHY_COMMUNICATION_MECHANISMS
                 ]
             )
 
@@ -112,9 +112,9 @@ def _featurize_emp_raw(featurizer, queries: List[str]):
         {
             "query": query,
             "response_tokenized": tokenize.sent_tokenize(query),
-            EMP_TASKS[0]: {"level": None, "rationales": None},
-            EMP_TASKS[1]: {"level": None, "rationales": None},
-            EMP_TASKS[2]: {"level": None, "rationales": None},
+            EMPATHY_COMMUNICATION_MECHANISMS[0]: {"level": None, "rationales": None},
+            EMPATHY_COMMUNICATION_MECHANISMS[1]: {"level": None, "rationales": None},
+            EMPATHY_COMMUNICATION_MECHANISMS[2]: {"level": None, "rationales": None},
         }
         for query in queries
     ]
@@ -131,7 +131,7 @@ def setup_emp_config(mm_data):
         "explorations": [],
     }
     for instance in mm_data:
-        for task in EMP_TASKS:
+        for task in EMPATHY_COMMUNICATION_MECHANISMS:
             level = instance[task]["level"]
             if level != "0":
                 rationales = instance[task]["rationales"].split("|")
@@ -437,17 +437,17 @@ class Encoder:
         """
         empathy = self.epitome.predict_empathy([prompt], [response])
         return {
-            "epitome_er": {
+            "epitome_emotional_reactions": {
                 "probabilities": empathy["er"]["probabilities"],
                 "predictions": empathy["er"]["predictions"],
                 "rationale": empathy["er"]["rationale"],
             },
-            "epitome_int": {
+            "epitome_interpretations": {
                 "probabilities": empathy["int"]["probabilities"],
                 "predictions": empathy["int"]["predictions"],
                 "rationale": empathy["int"]["rationale"],
             },
-            "epitome_exp": {
+            "epitome_explorations": {
                 "probabilities": empathy["exp"]["probabilities"],
                 "predictions": empathy["exp"]["predictions"],
                 "rationale": empathy["exp"]["rationale"],
@@ -457,7 +457,7 @@ class Encoder:
     def run_epitome_empty(self):
         return {
             epitome: {"probabilities": [0, 0, 0], "rationale": ""}
-            for epitome in ["epitome_er", "epitome_int", "epitome_exp"]
+            for epitome in ["epitome_emotional_reactions", "epitome_interpretations", "epitome_explorations"]
         }
 
     def run_pair(self, prompt, response):
