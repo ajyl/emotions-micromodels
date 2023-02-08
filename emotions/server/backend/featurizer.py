@@ -20,14 +20,14 @@ from emotions.config import (
     EMP_MMS,
     COG_DISTS,
 )
-from emotions.backend.BertFeaturizer import BertFeaturizer
-from emotions.backend.data_utils import (
+from emotions.server.backend.BertFeaturizer import BertFeaturizer
+from emotions.server.backend.data_utils import (
     load_ed_data,
     load_emp_data,
     reformat_emp_data,
 )
-from emotions.backend.EPITOME.empathy_classifier import EmpathyClassifier
-from emotions.backend.PAIR.cross_scorer_model import CrossScorerCrossEncoder
+from emotions.server.backend.EPITOME.empathy_classifier import EmpathyClassifier
+from emotions.server.backend.PAIR.cross_scorer_model import CrossScorerCrossEncoder
 from emotions.seeds.custom_emotions import ED_SEEDS
 from emotions.seeds.miti_codes import MITI_SEEDS
 from emotions.constants import MITI_THRESHOLD, THERAPIST

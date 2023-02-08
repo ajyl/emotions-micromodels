@@ -74,9 +74,6 @@ def encode(
 ):
 
     triggered_id = ctx.triggered_id
-    print("Encode; Triggered_id:", triggered_id)
-    print("Encode: triggered_prop_ids:", ctx.triggered_prop_ids)
-    #print(n_clicks)
 
     #if sum(n_clicks) == 0:
     #    return [

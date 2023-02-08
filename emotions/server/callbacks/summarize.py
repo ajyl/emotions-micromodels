@@ -6,49 +6,28 @@ from dash import callback, Input, Output, State, ALL, ctx, no_update
 import dash_bootstrap_components as dbc
 
 from emotions.server.components import summary as summary_component
-from emotions.backend.search import evaluate
+from emotions.server.backend.search import evaluate
 from emotions.config import (
     EMOTIONS,
     COG_DISTS,
     EMPATHY_COMMUNICATION_MECHANISMS,
     MITI_CODES,
 )
+from emotions.seeds.custom_emotions import ED_SEEDS
 from emotions.constants import THERAPIST, PATIENT
 
 
-@callback(
-    Output(summary_component, "children"),
-    [Input("conversation-encoding", "data")],
-)
-def summarize(mm_data):
-    """
-    Return summary of dialogue.
-    """
 
-    # parsed_query = ["or"]
-    # parsed_query.extend(
-    #    [[">=", "miti_%s" % miti_code, 0.8] for miti_code in MITI_CODES]
-    # )
-    # parsed_query.extend([
-    #    [">=", "custom_%s" % emotion, 0.8] for emotion in EMOTIONS
-    # ])
-    # parsed_query.extend([
-    #    [">=", "emotion_%s" % emotion, 0.8] for emotion in EMOTIONS
-    # ])
-    # parsed_query.extend([
-    #    [">=", "empathy_%s" % empathy, 0.8]
-    #    for empathy in EMPATHY_COMMUNICATION_MECHANISMS
-    # ])
-    # parsed_query.extend([
-    #    [">=", "epitome_%s" % empathy, 0.8]
-    #    for empathy in EMPATHY_COMMUNICATION_MECHANISMS
-    # ])
-    # parsed_query.extend([
-    #    [">=", "cog_dist_%s" % cog_dist, 0.8] for cog_dist in COG_DISTS
-    # ])
+def get_default_query():
+    """
+    Default query when dialogue is first loaded.
+    """
+    miti_queries = [[">=", "miti_%s" % miti_code, 0.8] for miti_code in MITI_CODES]
+    miti_queries.append([">=", "pair", 0.8])
+    miti_queries = (miti_queries, THERAPIST)
 
     emotion_queries = [
-        [">=", "custom_%s" % emotion, 0.8] for emotion in EMOTIONS
+        [">=", "custom_%s" % emotion, 0.8] for emotion in ED_SEEDS.keys()
     ]
     emotion_queries.extend(
         [[">=", "emotion_%s" % emotion, 0.8] for emotion in EMOTIONS]
@@ -68,16 +47,27 @@ def summarize(mm_data):
     empathy_queries = (empathy_queries, THERAPIST)
 
     queries = {
-        "miti": ([
-            [">=", "miti_%s" % miti_code, 0.8] for miti_code in MITI_CODES
-        ], THERAPIST),
+        "miti": miti_queries,
         "emotions": emotion_queries,
         "empathy": empathy_queries,
-        "cog_dist": ([
-            [">=", "cog_dist_%s" % cog_dist, 0.8] for cog_dist in COG_DISTS
-        ], PATIENT),
+        "cog_dist": (
+            [[">=", "cog_dist_%s" % cog_dist, 0.8] for cog_dist in COG_DISTS],
+            PATIENT,
+        ),
     }
+    return queries
 
+
+@callback(
+    Output(summary_component, "children"),
+    [Input("conversation-encoding", "data")],
+)
+def summarize(mm_data):
+    """
+    Return summary of dialogue.
+    """
+
+    queries = get_default_query()
     results = {}
     summaries = []
     for mm_type, query_obj in queries.items():
@@ -88,18 +78,25 @@ def summarize(mm_data):
         if speaker:
             query = ["and", query, ["==", "speaker", speaker]]
 
-        print(query)
-
         results[mm_type] = sorted(evaluate(query, mm_data))
 
-        summary = "%s: %d / %d" % (mm_type.upper(), len(results[mm_type]), len(mm_data))
+        summary = "%s: %d / %d" % (
+            mm_type.upper(),
+            len(results[mm_type]),
+            len(mm_data),
+        )
         summaries.append(
-            dbc.Button(
-                summary,
-                id={"type": "summary_box"},
-                n_clicks=0,
-                color="green",
+            dbc.AccordionItem(
+                [
+                    dbc.Button(
+                        summary,
+                        id={"type": "summary_box"},
+                        n_clicks=0,
+                        color="green",
+                    )
+                ],
+                title=mm_type,
             )
         )
 
-    return summaries
+    return dbc.Accordion(summaries)

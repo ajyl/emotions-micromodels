@@ -37,6 +37,7 @@ search_result_component = html.Div(
                         "height": "10%",
                         "width": "8%",
                         "margin-left": "42%",
+                        "display": "none"
                     },
                 ),
                 # Right-Arrow
@@ -53,6 +54,7 @@ search_result_component = html.Div(
                         "height": "10%",
                         "width": "8%",
                         "horizontalAlign": "center",
+                        "display": "none"
                     },
                 ),
             ],

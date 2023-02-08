@@ -76,6 +76,8 @@ EMOTIONS = [
     "sad",
     "surprised",
     "trusting",
+    "sentimental",
+    "terrified",
 ]
 
 

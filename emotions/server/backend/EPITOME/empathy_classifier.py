@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from torch.utils.data import TensorDataset, random_split
 from torch.nn.functional import softmax
 
-from emotions.backend.EPITOME.models.models import (
+from emotions.server.backend.EPITOME.models.models import (
     BiEncoderAttentionWithRationaleClassification,
 )
 from transformers import AdamW, RobertaConfig

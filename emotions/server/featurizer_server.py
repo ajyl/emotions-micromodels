@@ -10,7 +10,7 @@ import numpy as np
 from tqdm import tqdm
 from flask import Flask, request
 from interpret.glassbox.ebm.ebm import EBMExplanation
-from emotions.backend.featurizer import load_encoder
+from emotions.server.backend.featurizer import load_encoder
 from emotions.server.components.dialogue_dropdown import init_anno_mi_data
 from emotions.constants import THERAPIST, PATIENT
 
@@ -77,7 +77,7 @@ def init_cache(cache_filepath, force_rebuild=False):
     return cache
 
 
-cache = init_cache(cache_filepath, True)
+cache = init_cache(cache_filepath, False)
 
 app = Flask(__name__)
 

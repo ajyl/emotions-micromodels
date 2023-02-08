@@ -102,7 +102,6 @@ MITI_SEEDS = {
         "Look, I'm an ER doctor and I think I know when somebody's an alcoholic",
         "I think you have a serious drinking problem and you better straighten it out.",
         "Do not drink and drive.",
-        "What do you intend to do about that drinking problem?",
         "You've got to learn to take responsibility.",
         "Now's the time to quit.",
         "It's now or never.",

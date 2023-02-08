@@ -1,5 +1,7 @@
 ED_SEEDS = {
-    "sentimental": [],
+    #"sentimental": [
+    #    "I got sentimental",
+    #],
     "afraid": [
         "I was very scared",
         "That was terrifying",
@@ -13,8 +15,9 @@ ED_SEEDS = {
         "I've always been loyal",
         "I am faithful to",
     ],
-    "terrified": [
-    ],
+    #"terrified": [
+    #    "I was terrified by",
+    #],
     "joyful": [
         "I am very happy",
         "It makes me so happy",
