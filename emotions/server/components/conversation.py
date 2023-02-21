@@ -3,6 +3,8 @@ Conversation component.
 """
 
 from dash import html, dcc
+import dash_bootstrap_components as dbc
+from emotions.server.components.analysis import analysis
 
 conversation = html.Div(
     [
@@ -15,6 +17,6 @@ conversation = html.Div(
             },
             id="display-conversation",
         ),
-        dcc.Store(id="conversation-encoding")
+        dcc.Store(id="conversation-encoding"),
     ]
 )

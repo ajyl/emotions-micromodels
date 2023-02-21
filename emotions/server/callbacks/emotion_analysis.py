@@ -33,55 +33,57 @@ def build_emotion_analysis_component(emotions, expl_dropdown):
         global_fig["layout"].pop("xaxis")
         global_fig["layout"].pop("yaxis")
 
-    component = [
-        html.Thead(
-            html.Tr(
+    component = html.Div(
+        [
+            html.Thead(
+                html.Tr(
+                    [
+                        html.Th("Emotion"),
+                        html.Th("Confidence Score"),
+                    ]
+                ),
+                style={"hidden": True},
+            ),
+            html.Tbody(
                 [
-                    html.Th("Emotion"),
-                    html.Th("Confidence Score"),
+                    html.Tr(
+                        [
+                            html.Td(
+                                id="emotion_1",
+                                children=emotion_classifications[0],
+                            ),
+                            html.Td(
+                                id="emotion_score_1",
+                                children=round(emotion_scores[0], 3),
+                            ),
+                        ]
+                    ),
+                    html.Tr(
+                        [
+                            html.Td(
+                                id="emotion_2",
+                                children=emotion_classifications[1],
+                            ),
+                            html.Td(
+                                id="emotion_score_2",
+                                children=round(emotion_scores[1], 3),
+                            ),
+                        ]
+                    ),
+                    html.Tr(
+                        [
+                            html.Td(
+                                id="emotion_3",
+                                children=emotion_classifications[2],
+                            ),
+                            html.Td(
+                                id="emotion_score_3",
+                                children=round(emotion_scores[2], 3),
+                            ),
+                        ]
+                    ),
                 ]
             ),
-            style={"hidden": True},
-        ),
-        html.Tbody(
-            [
-                html.Tr(
-                    [
-                        html.Td(
-                            id="emotion_1",
-                            children=emotion_classifications[0],
-                        ),
-                        html.Td(
-                            id="emotion_score_1",
-                            children=round(emotion_scores[0], 3),
-                        ),
-                    ]
-                ),
-                html.Tr(
-                    [
-                        html.Td(
-                            id="emotion_2",
-                            children=emotion_classifications[1],
-                        ),
-                        html.Td(
-                            id="emotion_score_2",
-                            children=round(emotion_scores[1], 3),
-                        ),
-                    ]
-                ),
-                html.Tr(
-                    [
-                        html.Td(
-                            id="emotion_3",
-                            children=emotion_classifications[2],
-                        ),
-                        html.Td(
-                            id="emotion_score_3",
-                            children=round(emotion_scores[2], 3),
-                        ),
-                    ]
-                ),
-            ]
-        ),
-    ]
+        ]
+    )
     return component

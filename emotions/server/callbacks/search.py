@@ -113,7 +113,6 @@ def search(
 
         result_idx = search_result_idxs[curr_idx]
         result_component = build_search_result_component(data, result_idx)
-        # n_clicks[result_idx] += 1
 
         if curr_idx >= len(search_result_idxs) - 1:
             next_arrow["display"] = "none"
@@ -146,8 +145,7 @@ def search(
 
     else:
         parsed_query = parse_query(query)
-        # query_result_idxs = evaluate(parsed_query, data)
-        query_result_idxs = [1, 4, 8]
+        query_result_idxs = evaluate(parsed_query, data)
 
     if len(query_result_idxs) < 1:
         return [no_update] * 6

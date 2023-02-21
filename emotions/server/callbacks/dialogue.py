@@ -6,7 +6,7 @@ Module Doc String
 import requests
 from dash import callback, Input, Output
 from dash.exceptions import PreventUpdate
-from emotions.server.components.dialogue_dropdown import textbox, mi_data
+from emotions.server.components.dialogue_dropdown import textbox_popover, mi_data
 from emotions.constants import FEATURIZER_SERVER
 from emotions.server.init_server import CACHE
 
@@ -22,6 +22,8 @@ def display_dialogue(dialogue_id):
     """
     Display dialogue.
     """
+    print("Display_dialogue.")
+    print("dialogue_id:", dialogue_id)
     if dialogue_id is None:
         raise PreventUpdate
 
@@ -34,9 +36,11 @@ def display_dialogue(dialogue_id):
             json={"convo_id": dialogue_id, "convo": mi_data[dialogue_id]},
         )
         dialogue_encoding = response.json()
+
+    print("Display dialogue Returning...")
     return [
         [
-            textbox(utt_obj["utterance"], utt_obj["speaker"], idx, "dialogue-click")
+            textbox_popover(utt_obj["utterance"], utt_obj["speaker"], idx, "dialogue-click")
             for idx, utt_obj in enumerate(mi_data[dialogue_id])
         ],
         dialogue_encoding,

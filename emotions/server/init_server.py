@@ -9,7 +9,7 @@ import pickle
 import time
 import sys
 import base64
-from dash import Dash, html
+from dash import Dash, html, dcc
 import dash_bootstrap_components as dbc
 from interpret.glassbox.ebm.ebm import EBMExplanation
 from emotions.server.components import (
@@ -69,6 +69,7 @@ cache_filepath = os.path.join(
 #CACHE = load_cache(cache_filepath)
 CACHE = {}
 
+#app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = dbc.Container(
     [
@@ -77,16 +78,18 @@ app.layout = dbc.Container(
         search_bar_component,
         dbc.Row(
             [
-                dbc.Col(conversation, width=4),
+                dbc.Col(conversation, width=6),
                 dbc.Col(
                     [
                         dbc.Row(summary),
                         dbc.Row(search_result_component),
                     ],
-                    width=8)
+                    width=6)
             ]
         ),
         dbc.Row([dbc.Col(analysis, width=12)]),
+        dcc.Store(id="dialogue_idx"),
+
     ],
     fluid=True,
 )

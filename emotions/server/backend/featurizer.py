@@ -39,7 +39,7 @@ DATA_DIR = os.path.join(MM_HOME, "emotions/data")
 EPITOME_0 = os.path.join(DATA_DIR, "epitome_0.json")
 EPITOME_1 = os.path.join(DATA_DIR, "epitome_1.json")
 
-PAIR_PRETRAIN_MODEL = "mental/mental-roberta-base"
+PAIR_PRETRAIN_MODEL = "roberta-base"
 
 
 def _format_clf_results(probs, classes):

@@ -105,3 +105,60 @@ def textbox(text, box, idx, component_id):
         color=color,
         inverse=inverse,
     )
+
+
+def textbox_popover(text, box, idx, component_id):
+    """
+    Textbox component.
+    """
+
+    style = {
+        "max-width": "55%",
+        "width": "max-content",
+        "border-radius": "16px",
+    }
+
+    if box == PATIENT:
+        style["margin-left"] = "auto"
+        style["margin-right"] = 0
+
+        color = "primary"
+        inverse = True
+
+    elif box == THERAPIST:
+        style["margin-left"] = 0
+        style["margin-right"] = "auto"
+
+        color = "light"
+        inverse = False
+
+    else:
+        raise ValueError("Incorrect option for 'box'.")
+
+    return dbc.Card(
+        [
+            html.Div(
+                dbc.Button(
+                    text,
+                    id={"type": component_id, "index": idx},
+                    n_clicks=0,
+                    color=color,
+                    value={"speaker": box, "utterance": text},
+                ),
+                id=f"popover-div-wrapper-{idx}",
+            ),
+            dbc.Popover(
+                dbc.PopoverBody(
+                    f"Hmm, init", id={"type": "popover_body", "index": idx}
+                ),
+                id={"type": "popover", "index": idx},
+                is_open=False,
+                target=f"popover-div-wrapper-{idx}",
+                style={"width": "700px", "max-width": "700px"},
+            ),
+        ],
+        style=style,
+        body=True,
+        color=color,
+        inverse=inverse,
+    )

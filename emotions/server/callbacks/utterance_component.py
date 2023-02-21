@@ -44,18 +44,21 @@ def build_utterance_tab_component(speaker, active_tab):
     )
 
 
-def build_utterance_component(response_obj, speaker, utterance):
+def _build_utterance_component(
+    response_obj, speaker, utterance, active_tab=None, mm_type=None
+):
     """
     Build utterance component.
     """
-    if speaker == THERAPIST:
-        default_active_tab = "utterance-tab-1"
-        default_mm_type = "miti"
-    else:
-        default_active_tab = "utterance-tab-2"
-        default_mm_type = "custom"
+    if active_tab is None:
+        active_tab = (
+            "utterance-tab-1" if speaker == THERAPIST else "utterance-tab-2"
+        )
 
-    tab_component = build_utterance_tab_component(speaker, default_active_tab)
+    if mm_type is None:
+        mm_type = "miti" if speaker == THERAPIST else "custom"
+
+    tab_component = build_utterance_tab_component(speaker, active_tab)
     formatted_speaker = speaker[0].upper() + speaker[1:] + ":"
 
     utterance = " ".join(word_tokenize(utterance))
@@ -74,25 +77,42 @@ def build_utterance_component(response_obj, speaker, utterance):
             utterance, response_obj, "cog_dist_", COG_DIST_THRESHOLD
         ),
     }
-    annotated_utterance = annotate_utterance(
-        utterance_annotation_obj, default_mm_type
-    )
+    annotated_utterance = annotate_utterance(utterance_annotation_obj, mm_type)
 
     return (
         utterance_annotation_obj,
-        [
-            tab_component,
-            dbc.CardBody(
-                [
-                    html.H5(formatted_speaker),
-                    html.Br(),
-                    annotated_utterance_component,
-                ],
-                id="utterance-card",
-            ),
-        ],
+        tab_component,
+        formatted_speaker,
         annotated_utterance,
     )
+
+
+def build_utterance_component(utterance_obj, utterance_encoding, active_tab):
+    """
+    Build utterance components.
+    """
+    utterance = utterance_obj["utterance"]
+    speaker = utterance_obj["speaker"]
+    mm_type = {
+        "utterance-tab-1": "miti",
+        "utterance-tab-2": "custom",
+        "utterance-tab-3": "empathy",
+        "utterance-tab-4": "cog_dist",
+    }[active_tab]
+
+    (
+        annotated_utterance_obj,
+        tab_component,
+        formatted_speaker,
+        annotated_utterance,
+    ) = _build_utterance_component(
+        utterance_encoding,
+        speaker,
+        utterance,
+        active_tab=active_tab,
+        mm_type=mm_type,
+    )
+    return tab_component, formatted_speaker, annotated_utterance
 
 
 def handle_hover(hover_data):
@@ -149,6 +169,7 @@ def update_utterance_component(annotation_obj, tab_id):
         no_update,
         no_update,
         annotate_utterance(annotation_obj, annotation_type),
+        no_update,
         no_update,
         no_update,
         no_update,

@@ -2,7 +2,7 @@
 Callback method to generate summary.
 """
 
-from dash import callback, Input, Output, State, ALL, ctx, no_update
+from dash import callback, Input, Output, State, ALL, ctx, no_update, html
 import dash_bootstrap_components as dbc
 
 from emotions.server.components import summary as summary_component
@@ -66,7 +66,6 @@ def summarize(mm_data):
     """
     Return summary of dialogue.
     """
-
     queries = get_default_query()
     results = {}
     summaries = []
@@ -85,18 +84,22 @@ def summarize(mm_data):
             len(results[mm_type]),
             len(mm_data),
         )
+
         summaries.append(
-            dbc.AccordionItem(
+            html.Tr(
                 [
-                    dbc.Button(
-                        summary,
-                        id={"type": "summary_box"},
-                        n_clicks=0,
-                        color="green",
+                    html.Td(children=mm_type.upper()),
+                    html.Td(
+                        dbc.Button(
+                            summary
+                        )
                     )
-                ],
-                title=mm_type,
+                ]
             )
         )
-
-    return dbc.Accordion(summaries)
+    return html.Div(
+        [
+            html.Thead(html.Tr([html.Th("Clinical Skill"), html.Th("Summary")])),
+            html.Tbody(summaries)
+        ]
+    )
