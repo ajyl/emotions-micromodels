@@ -161,5 +161,5 @@ def textbox_popover(text, box, idx, component_id):
         body=True,
         color=color,
         inverse=inverse,
-        id="dialogue-textbox-card"
+        id={"type": "dialogue-textbox-card", "index": idx}
     )

@@ -3,6 +3,7 @@ Callback method to generate summary.
 """
 
 from dash import callback, Input, Output, State, ALL, ctx, no_update, html
+from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 
 from emotions.server.components import summary as summary_component
@@ -111,7 +112,10 @@ def summarize(mm_data):
                                     summary,
                                     id={"type": mm_type, "index": idx},
                                 ),
-                                html.Span("demonstrate %s." % summary_str_map.get(mm_type, mm_type))
+                                html.Span(
+                                    "demonstrate %s."
+                                    % summary_str_map.get(mm_type, mm_type)
+                                ),
                             ]
                         )
                     ),
@@ -135,7 +139,7 @@ def summarize(mm_data):
 
 
 @callback(
-    Output("dialogue-textbox-card", "type"),
+    Output({"type": "dialogue-textbox-card", "index": ALL}, "style"),
     [
         Input({"type": "miti", "index": ALL}, "n_clicks"),
         Input({"type": "emotions", "index": ALL}, "n_clicks"),
@@ -147,7 +151,9 @@ def summarize(mm_data):
         State("emotions-summary-idxs", "data"),
         State("empathy-summary-idxs", "data"),
         State("cog-dist-summary-idxs", "data"),
+        State({"type": "dialogue-textbox-card", "index": ALL}, "style"),
     ],
+    prevent_initial_call=True,
 )
 def query_summary(
     miti_clicks,
@@ -158,21 +164,37 @@ def query_summary(
     emotions_idxs,
     empathy_idxs,
     cog_dist_idxs,
+    styles,
 ):
-    from dash.exceptions import PreventUpdate
-
-    raise PreventUpdate
-    # triggered_id = ctx.triggered_id
+    _sum = sum(
+        [
+            x
+            for x in miti_clicks
+            + emotions_clicks
+            + empathy_clicks
+            + cog_dist_clicks
+            if x is not None
+        ]
+    )
+    if _sum <= 0:
+        raise PreventUpdate
+    triggered_id = ctx.triggered_id
     print(triggered_id)
 
-    # breakpoint()
     if triggered_id["type"] == "miti":
-        pass
+        query_idxs = miti_idxs
     elif triggered_id["type"] == "emotions":
-        pass
+        query_idxs = emotions_idxs
     elif triggered_id["type"] == "empathy":
-        pass
+        query_idxs = empathy_idxs
     elif triggered_id["type"] == "cog-dist":
-        pass
+        query_idxs = cog_dist_idxs
 
-    # breakpoint()
+    for _idx in range(len(styles)):
+        styles[_idx]["opacity"] = 1
+
+    non_idxs = [idx for idx in range(len(styles)) if idx not in query_idxs]
+    for _idx in non_idxs:
+        styles[_idx]["opacity"] = 0.5
+
+    return styles

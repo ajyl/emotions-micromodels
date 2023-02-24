@@ -6,7 +6,7 @@ from emotions.server.init_server import app, server
 from emotions.server.callbacks.dialogue import display_dialogue
 from emotions.server.callbacks.encode import analysis_popup
 from emotions.server.callbacks.search import search
-from emotions.server.callbacks.summarize import summarize
+from emotions.server.callbacks.summarize import summarize, query_summary
 
 
 if __name__ == "__main__":
