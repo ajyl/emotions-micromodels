@@ -56,7 +56,7 @@ def _build_utterance_component(
         )
 
     if mm_type is None:
-        mm_type = "miti" if speaker == THERAPIST else "custom"
+        mm_type = "miti" if speaker == THERAPIST else "cog_dist"
 
     tab_component = build_utterance_tab_component(speaker, active_tab)
     formatted_speaker = speaker[0].upper() + speaker[1:] + ":"
@@ -67,8 +67,8 @@ def _build_utterance_component(
         "miti": get_annotation_spans(
             utterance, response_obj, "miti_", MITI_THRESHOLD
         ),
-        "custom": get_annotation_spans(
-            utterance, response_obj, "custom_", EMOTION_THRESHOLD
+        "emotion": get_annotation_spans(
+            utterance, response_obj, "emotion_", EMOTION_THRESHOLD
         ),
         "empathy": get_annotation_spans(
             utterance, response_obj, "empathy_", EMPATHY_THRESHOLD
@@ -95,7 +95,7 @@ def build_utterance_component(utterance_obj, utterance_encoding, active_tab):
     speaker = utterance_obj["speaker"]
     mm_type = {
         "utterance-tab-1": "miti",
-        "utterance-tab-2": "custom",
+        "utterance-tab-2": "emotion",
         "utterance-tab-3": "empathy",
         "utterance-tab-4": "cog_dist",
     }[active_tab]
@@ -160,7 +160,7 @@ def update_utterance_component(annotation_obj, tab_id):
     """
     annotation_type = {
         "utterance-tab-1": "miti",
-        "utterance-tab-2": "custom",
+        "utterance-tab-2": "emotion",
         "utterance-tab-3": "empathy",
         "utterance-tab-4": "cog_dist",
     }[tab_id]

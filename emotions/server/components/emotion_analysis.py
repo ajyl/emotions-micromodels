@@ -9,7 +9,7 @@ from emotions.config import EMOTIONS
 
 def get_emotion_mms():
     return ["emotion_%s" % emotion for emotion in EMOTIONS] + [
-        "custom_%s" % emotion for emotion in EMOTIONS
+        "fasttext_emotion_%s" % emotion for emotion in EMOTIONS
     ]
 
 

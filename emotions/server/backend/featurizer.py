@@ -9,6 +9,7 @@ import pickle
 import torch
 from nltk import tokenize
 from tqdm import tqdm
+import fasttext as ft
 from interpret.glassbox import ExplainableBoostingClassifier
 from interpret.glassbox.ebm.ebm import EBMPreprocessor
 from transformers import AutoTokenizer, AutoModel
@@ -19,6 +20,7 @@ from emotions.config import (
     EMPATHY_COMMUNICATION_MECHANISMS,
     EMP_MMS,
     COG_DISTS,
+    EMOTIONS
 )
 from emotions.server.backend.BertFeaturizer import BertFeaturizer
 from emotions.server.backend.data_utils import (
@@ -26,8 +28,12 @@ from emotions.server.backend.data_utils import (
     load_emp_data,
     reformat_emp_data,
 )
-from emotions.server.backend.EPITOME.empathy_classifier import EmpathyClassifier
-from emotions.server.backend.PAIR.cross_scorer_model import CrossScorerCrossEncoder
+from emotions.server.backend.EPITOME.empathy_classifier import (
+    EmpathyClassifier,
+)
+from emotions.server.backend.PAIR.cross_scorer_model import (
+    CrossScorerCrossEncoder,
+)
 from emotions.seeds.custom_emotions import ED_SEEDS
 from emotions.seeds.miti_codes import MITI_SEEDS
 from emotions.constants import MITI_THRESHOLD, THERAPIST
@@ -112,9 +118,18 @@ def _featurize_emp_raw(featurizer, queries: List[str]):
         {
             "query": query,
             "response_tokenized": tokenize.sent_tokenize(query),
-            EMPATHY_COMMUNICATION_MECHANISMS[0]: {"level": None, "rationales": None},
-            EMPATHY_COMMUNICATION_MECHANISMS[1]: {"level": None, "rationales": None},
-            EMPATHY_COMMUNICATION_MECHANISMS[2]: {"level": None, "rationales": None},
+            EMPATHY_COMMUNICATION_MECHANISMS[0]: {
+                "level": None,
+                "rationales": None,
+            },
+            EMPATHY_COMMUNICATION_MECHANISMS[1]: {
+                "level": None,
+                "rationales": None,
+            },
+            EMPATHY_COMMUNICATION_MECHANISMS[2]: {
+                "level": None,
+                "rationales": None,
+            },
         }
         for query in queries
     ]
@@ -165,6 +180,7 @@ class Encoder:
         self.pair = None
         self.pair_tokenizer = None
         self.epitome = None
+        self.ed_fasttext = None
 
         print("Adding Empathetic Dialogue Micromodels...")
         self._add_ed_mms()
@@ -187,6 +203,7 @@ class Encoder:
         epitome_int_clf_path = kwargs.get("epitome_int_classifier", None)
 
         pair_path = kwargs.get("pair_path", None)
+        ed_fasttext_path = kwargs.get("ed_fasttext_path", None)
 
         if ed_clf_path is not None:
             self.ed_model = self.load_clf(ed_clf_path)
@@ -199,6 +216,9 @@ class Encoder:
 
         if emp_int_clf_path is not None:
             self.emp_model_int = self.load_clf(emp_int_clf_path)
+
+        if ed_fasttext_path is not None:
+            self._add_ed_fasttext(ed_fasttext_path)
 
         if (
             epitome_er_clf_path is not None
@@ -217,11 +237,7 @@ class Encoder:
     def _init_featurizer(self):
         self.featurizer = BertFeaturizer(MM_HOME, self.mm_configs)
         self.mms = self.featurizer.list_micromodels
-        self.ed_mms = [
-            mm
-            for mm in self.mms
-            if mm.startswith("emotion_") or mm.startswith("custom_")
-        ]
+        self.ed_mms = [mm for mm in self.mms if mm.startswith("emotion_")]
         self.emp_mms = [mm for mm in self.mms if mm.startswith("empathy_")]
 
     def _init_epitome(self, er_path, int_path, exp_path):
@@ -252,25 +268,32 @@ class Encoder:
 
     def _add_ed_mms(self):
         """Add micromodels for EmpatheticDialogue"""
-        for emotion, seed in ED_SEEDS.items():
-            if len(seed) < 1:
-                continue
-            config = {
-                "name": "custom_%s" % emotion,
-                "model_type": "bert_query",
-                "model_path": os.path.join(
-                    MM_HOME, "models/custom_%s" % emotion
-                ),
-                "setup_args": {
-                    "threshold": 0.85,
-                    "seed": seed,
-                    "infer_config": {
-                        "segment_config": {"window_size": 5, "step_size": 3}
-                    },
-                },
-            }
-            self.mm_configs.append(config)
+        #for emotion, seed in ED_SEEDS.items():
+        #    if len(seed) < 1:
+        #        continue
+        #    config = {
+        #        "name": "custom_%s" % emotion,
+        #        "model_type": "bert_query",
+        #        "model_path": os.path.join(
+        #            MM_HOME, "models/custom_%s" % emotion
+        #        ),
+        #        "setup_args": {
+        #            "threshold": 0.85,
+        #            "seed": seed,
+        #            "infer_config": {
+        #                "segment_config": {"window_size": 5, "step_size": 3}
+        #            },
+        #        },
+        #    }
+        #    self.mm_configs.append(config)
         add_ed_emotions(self.mm_configs)
+
+    def _add_ed_fasttext(self, fasttext_path):
+        """
+        Load fasttext for emotion classification.
+        """
+        self.ed_fasttext = ft.load_model(fasttext_path)
+        return
 
     def _add_miti_mms(self):
         for miti_code, seed in MITI_SEEDS.items():
@@ -373,6 +396,35 @@ class Encoder:
         emotion_preds = _format_clf_results(probs, emotions)
         return emotion_preds
 
+    def run_emotion_clf_fasttext(self, queries: List[str]):
+        """
+        Run fasttext emotion clf.
+        """
+        if self.ed_fasttext is None:
+            raise RuntimeError(
+                "Fasttext for emotion classification is not loaded!"
+            )
+
+        num_emotions = len(self.ed_fasttext.labels)
+        predictions, probabilities = self.ed_fasttext.predict(
+            queries, k=num_emotions
+        )
+
+        results = []
+        for idx, _ in enumerate(queries):
+            _result = {}
+            preds = predictions[idx]
+            probs = probabilities[idx]
+
+            for emotion in EMOTIONS:
+                _result[emotion] = {
+                    "max_score": probs[preds.index("__label__%s" % emotion)],
+                    "segment": "",
+                }
+
+            results.append(_result)
+        return results
+
     def train_empathy_clfs(self, filepath):
         """
         Train empathy classifiers
@@ -457,7 +509,11 @@ class Encoder:
     def run_epitome_empty(self):
         return {
             epitome: {"probabilities": [0, 0, 0], "rationale": ""}
-            for epitome in ["epitome_emotional_reactions", "epitome_interpretations", "epitome_explorations"]
+            for epitome in [
+                "epitome_emotional_reactions",
+                "epitome_interpretations",
+                "epitome_explorations",
+            ]
         }
 
     def run_pair(self, prompt, response):
@@ -499,26 +555,26 @@ class Encoder:
         bert_results = self.featurizer.run_bert([utterance])
 
         results = bert_results[0]
-        emotion_scores = [
-            results["results"][mm]["max_score"] for mm in self.ed_mms
-        ]
-        emotion_scores = np.array(emotion_scores, ndmin=2)
+        # emotion_scores = [
+        #    results["results"][mm]["max_score"] for mm in self.ed_mms
+        # ]
+        # emotion_scores = np.array(emotion_scores, ndmin=2)
 
-        empathy_features = _featurize_emp_raw(self.featurizer, [utterance])
-        emp_er, emp_exp, emp_int = self.run_empathy_clf_features(
-            empathy_features
-        )
+        # empathy_features = _featurize_emp_raw(self.featurizer, [utterance])
+        # emp_er, emp_exp, emp_int = self.run_empathy_clf_features(
+        #    empathy_features
+        # )
 
-        emotion_preds = self.run_emotion_clf_features(emotion_scores)[0]
+        # emotion_preds = self.run_emotion_clf_features(emotion_scores)[0]
         return {
-            "emotion": {
-                "predictions": emotion_preds,
-            },
-            "empathy": {
-                "empathy_emotional_reactions": emp_er,
-                "empathy_explorations": emp_exp,
-                "empathy_interpretations": emp_int,
-            },
+            # "emotion": {
+            #    "predictions": emotion_preds,
+            # },
+            # "empathy": {
+            #    "empathy_emotional_reactions": emp_er,
+            #    "empathy_explorations": emp_exp,
+            #    "empathy_interpretations": emp_int,
+            # },
             "micromodels": results["results"],
         }
 
@@ -597,15 +653,21 @@ class Encoder:
 
         empathy_features = _featurize_emp_raw(self.featurizer, utts)
 
-        emotion_preds = self.run_emotion_clf_features(emotion_features)
-        emp_er, emp_exp, emp_int = self.run_empathy_clf_features(
-            empathy_features
-        )
+        emotion_preds = None
+        if self.ed_model is not None:
+            emotion_preds = self.run_emotion_clf_features(emotion_features)
+            assert len(bert_results) == len(emotion_preds)
+
+        emp_er = None
+        emp_exp = None
+        emp_int = None
+        if self.emp_model_er is not None:
+            emp_er, emp_exp, emp_int = self.run_empathy_clf_features(
+                empathy_features
+            )
+            assert len(bert_results) == len(emp_er)
 
         encoded = []
-        assert len(bert_results) == len(emotion_preds)
-        assert len(bert_results) == len(emp_er)
-
         for utt_idx, _results in bert_results.items():
 
             utterance = _results["utterance"]
@@ -615,21 +677,28 @@ class Encoder:
                 "utterance": utterance,
                 "speaker": speaker,
                 "results": {
-                    "emotion": {
-                        "predictions": emotion_preds[utt_idx],
-                    },
-                    "empathy": {},
                     "micromodels": _results["results"],
                 },
             }
-            for empathy_type in [
-                ("emotional_reactions", emp_er),
-                ("interpretations", emp_int),
-                ("explorations", emp_exp),
-            ]:
-                utterance_encoding["results"]["empathy"].update(
-                    {"empathy_%s" % empathy_type[0]: empathy_type[1]}
-                )
+            if emotion_preds is not None:
+                utterance_encoding["results"]["emotion"] = {
+                    "predictions": emotion_preds[utt_idx],
+                }
+
+            if (
+                emp_er is not None
+                and emp_int is not None
+                and emp_exp is not None
+            ):
+                utterance_encoding["results"]["empathy"] = {}
+                for empathy_type in [
+                    ("emotional_reactions", emp_er),
+                    ("interpretations", emp_int),
+                    ("explorations", emp_exp),
+                ]:
+                    utterance_encoding["results"]["empathy"].update(
+                        {"empathy_%s" % empathy_type[0]: empathy_type[1]}
+                    )
 
             epitome_results = self.run_epitome_empty()
             if self.epitome and speaker == THERAPIST and utt_idx > 0:
@@ -660,6 +729,18 @@ class Encoder:
                 }
 
             encoded.append(utterance_encoding)
+
+        if len(utts) != len(encoded):
+            breakpoint()
+
+        if self.ed_fasttext is not None:
+            fasttext_results = self.run_emotion_clf_fasttext(utts)
+            for idx, _fasttext_result in enumerate(fasttext_results):
+                for emotion, _result_obj in _fasttext_result.items():
+                    encoded[idx]["results"]["micromodels"][
+                        "fasttext_emotion_%s" % emotion
+                    ] = _result_obj
+
         return encoded
 
     def get_explain(self):
@@ -682,6 +763,7 @@ def load_encoder(
     epitome_exp_path=None,
     epitome_int_path=None,
     pair_path=None,
+    ed_fasttext_path=None,
     device="cpu",
 ):
     """
@@ -696,6 +778,7 @@ def load_encoder(
         epitome_exp_classifier=epitome_exp_path,
         epitome_int_classifier=epitome_int_path,
         pair_path=pair_path,
+        ed_fasttext_path=ed_fasttext_path,
         device=device,
     )
     # encoder.train_empathy_clfs(EPITOME_1)
@@ -715,23 +798,28 @@ def main():
     epitome_exp_classifier = os.path.join(MODELS_DIR, "EPITOME_EXP.pth")
     epitome_int_classifier = os.path.join(MODELS_DIR, "EPITOME_INT.pth")
     pair_path = os.path.join(MODELS_DIR, "pair.pth")
+    fasttext_path = os.path.join(
+        MODELS_DIR, "fasttext_empathetic_dialogues.mdl"
+    )
 
     encoder = load_encoder(
-        ed_path=ed_classifier,
-        emp_er_path=emp_er_classifier,
-        emp_exp_path=emp_exp_classifier,
-        emp_int_path=emp_int_classifier,
+        #ed_path=ed_classifier,
+        #emp_er_path=emp_er_classifier,
+        #emp_exp_path=emp_exp_classifier,
+        #emp_int_path=emp_int_classifier,
         epitome_er_path=epitome_er_classifier,
         epitome_exp_path=epitome_exp_classifier,
         epitome_int_path=epitome_int_classifier,
         pair_path=pair_path,
+        ed_fasttext_path=fasttext_path,
         device="cpu",
     )
 
     prompt = "I almost got into a car accident."
     response = "You almost got into a car accident."
 
-    testing2 = encoder.encode(prompt, response)
+    breakpoint()
+    #testing2 = encoder.encode(prompt, response)
 
     testing3 = encoder.encode_convo(
         [

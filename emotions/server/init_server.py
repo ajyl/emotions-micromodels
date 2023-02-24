@@ -20,6 +20,8 @@ from emotions.server.components import (
     search_result_component,
     search_bar_component,
 )
+
+from emotions.server.components.summary import miti_query_idxs, emotions_query_idxs, empathy_query_idxs, cog_dist_query_idxs
 from emotions.constants import FEATURIZER_SERVER
 from emotions.server.cache_utils import load_cache
 
@@ -61,7 +63,7 @@ except RuntimeError:
     sys.exit()
 
 
-EMOTION_EXPL = init_explanation(FEATURIZER_SERVER)
+#EMOTION_EXPL = init_explanation(FEATURIZER_SERVER)
 cache_filepath = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
     "cache.json"
@@ -89,6 +91,10 @@ app.layout = dbc.Container(
         ),
         dbc.Row([dbc.Col(analysis, width=12)]),
         dcc.Store(id="dialogue_idx"),
+        miti_query_idxs,
+        emotions_query_idxs,
+        empathy_query_idxs,
+        cog_dist_query_idxs,
 
     ],
     fluid=True,

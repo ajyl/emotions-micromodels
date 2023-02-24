@@ -3,8 +3,10 @@ Summary component.
 """
 
 from dash import html, dcc
-import dash_bootstrap_components as dbc
 
 
 summary = html.Div()
-
+miti_query_idxs = dcc.Store(id="miti-summary-idxs")
+emotions_query_idxs = dcc.Store(id="emotions-summary-idxs")
+empathy_query_idxs = dcc.Store(id="empathy-summary-idxs")
+cog_dist_query_idxs = dcc.Store(id="cog-dist-summary-idxs")

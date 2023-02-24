@@ -154,11 +154,12 @@ def textbox_popover(text, box, idx, component_id):
                 id={"type": "popover", "index": idx},
                 is_open=False,
                 target=f"popover-div-wrapper-{idx}",
-                style={"width": "700px", "max-width": "700px"},
+                style={"width": "1000px", "max-width": "1000px"},
             ),
         ],
         style=style,
         body=True,
         color=color,
         inverse=inverse,
+        id="dialogue-textbox-card"
     )

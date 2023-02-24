@@ -62,4 +62,5 @@ search_result_component = html.Div(
         ),
     ],
     id="search-result-component",
+    style={"display": "none"}
 )

@@ -13,21 +13,21 @@ from emotions.config import (
     EMPATHY_COMMUNICATION_MECHANISMS,
     MITI_CODES,
 )
-from emotions.seeds.custom_emotions import ED_SEEDS
 from emotions.constants import THERAPIST, PATIENT
-
 
 
 def get_default_query():
     """
     Default query when dialogue is first loaded.
     """
-    miti_queries = [[">=", "miti_%s" % miti_code, 0.8] for miti_code in MITI_CODES]
+    miti_queries = [
+        [">=", "miti_%s" % miti_code, 0.8] for miti_code in MITI_CODES
+    ]
     miti_queries.append([">=", "pair", 0.8])
     miti_queries = (miti_queries, THERAPIST)
 
     emotion_queries = [
-        [">=", "custom_%s" % emotion, 0.8] for emotion in ED_SEEDS.keys()
+        [">=", "fasttext_emotion_%s" % emotion, 0.8] for emotion in EMOTIONS
     ]
     emotion_queries.extend(
         [[">=", "emotion_%s" % emotion, 0.8] for emotion in EMOTIONS]
@@ -59,7 +59,13 @@ def get_default_query():
 
 
 @callback(
-    Output(summary_component, "children"),
+    [
+        Output(summary_component, "children"),
+        Output("miti-summary-idxs", "data"),
+        Output("emotions-summary-idxs", "data"),
+        Output("empathy-summary-idxs", "data"),
+        Output("cog-dist-summary-idxs", "data"),
+    ],
     [Input("conversation-encoding", "data")],
 )
 def summarize(mm_data):
@@ -69,6 +75,7 @@ def summarize(mm_data):
     queries = get_default_query()
     results = {}
     summaries = []
+    idx = 0
     for mm_type, query_obj in queries.items():
         speaker = query_obj[1]
         query = ["or"]
@@ -79,8 +86,16 @@ def summarize(mm_data):
 
         results[mm_type] = sorted(evaluate(query, mm_data))
 
-        summary = "%s: %d / %d" % (
-            mm_type.upper(),
+        # summary = "%s: %d / %d" % (
+        #    mm_type.upper(),
+        #    len(results[mm_type]),
+        #    len(mm_data),
+        # )
+        summary_str_map = {
+            "miti": "MITI codes",
+            "cog_dist": "cognitive distortions",
+        }
+        summary = "%d out of %d utterances " % (
             len(results[mm_type]),
             len(mm_data),
         )
@@ -90,16 +105,74 @@ def summarize(mm_data):
                 [
                     html.Td(children=mm_type.upper()),
                     html.Td(
-                        dbc.Button(
-                            summary
+                        html.Div(
+                            [
+                                dbc.Button(
+                                    summary,
+                                    id={"type": mm_type, "index": idx},
+                                ),
+                                html.Span("demonstrate %s." % summary_str_map.get(mm_type, mm_type))
+                            ]
                         )
-                    )
+                    ),
                 ]
             )
         )
-    return html.Div(
-        [
-            html.Thead(html.Tr([html.Th("Clinical Skill"), html.Th("Summary")])),
-            html.Tbody(summaries)
-        ]
+        idx += 1
+
+    return (
+        html.Div(
+            [
+                html.Thead(html.Tr([html.Th("Clinical Skill"), html.Th("")])),
+                html.Tbody(summaries),
+            ]
+        ),
+        results["miti"],
+        results["emotions"],
+        results["empathy"],
+        results["cog_dist"],
     )
+
+
+@callback(
+    Output("dialogue-textbox-card", "type"),
+    [
+        Input({"type": "miti", "index": ALL}, "n_clicks"),
+        Input({"type": "emotions", "index": ALL}, "n_clicks"),
+        Input({"type": "empathy", "index": ALL}, "n_clicks"),
+        Input({"type": "cog_dist", "index": ALL}, "n_clicks"),
+    ],
+    [
+        State("miti-summary-idxs", "data"),
+        State("emotions-summary-idxs", "data"),
+        State("empathy-summary-idxs", "data"),
+        State("cog-dist-summary-idxs", "data"),
+    ],
+)
+def query_summary(
+    miti_clicks,
+    emotions_clicks,
+    empathy_clicks,
+    cog_dist_clicks,
+    miti_idxs,
+    emotions_idxs,
+    empathy_idxs,
+    cog_dist_idxs,
+):
+    from dash.exceptions import PreventUpdate
+
+    raise PreventUpdate
+    # triggered_id = ctx.triggered_id
+    print(triggered_id)
+
+    # breakpoint()
+    if triggered_id["type"] == "miti":
+        pass
+    elif triggered_id["type"] == "emotions":
+        pass
+    elif triggered_id["type"] == "empathy":
+        pass
+    elif triggered_id["type"] == "cog-dist":
+        pass
+
+    # breakpoint()

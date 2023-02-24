@@ -22,7 +22,7 @@ MM_TYPES = [
     "pair",
     "empathy",
     "epitome",
-    "custom",
+    "fasttext_emotion",
     "emotion",
     "cog_dist",
 ]

@@ -30,17 +30,21 @@ cache_filepath = os.path.join(
 )
 
 pair_path = os.path.join(MODELS_DIR, "pair.pth")
+fasttext_path = os.path.join(
+    MODELS_DIR, "fasttext_empathetic_dialogues.mdl"
+)
 
 encoder = load_encoder(
-    ed_path=ed_classifier,
-    emp_er_path=emp_er_classifier,
-    emp_exp_path=emp_exp_classifier,
-    emp_int_path=emp_int_classifier,
+        #ed_path=ed_classifier,
+        #emp_er_path=emp_er_classifier,
+        #emp_exp_path=emp_exp_classifier,
+        #emp_int_path=emp_int_classifier,
     epitome_er_path=epitome_er_classifier,
     epitome_exp_path=epitome_exp_classifier,
     epitome_int_path=epitome_int_classifier,
     pair_path=pair_path,
-    device="cpu",
+    ed_fasttext_path=fasttext_path,
+    device="cuda",
 )
 
 
@@ -77,7 +81,8 @@ def init_cache(cache_filepath, force_rebuild=False):
     return cache
 
 
-cache = init_cache(cache_filepath, False)
+#cache = init_cache(cache_filepath, False)
+cache = {}
 
 app = Flask(__name__)
 

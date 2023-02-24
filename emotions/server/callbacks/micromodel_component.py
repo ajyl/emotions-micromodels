@@ -19,7 +19,7 @@ def build_micromodel_component(micromodel_results, utterance, speaker):
     Return bar graph.
     micromodel_results: response_obj["micromodels"]
     """
-    client_mms = ["emotion", "custom", "cog_dist"]
+    client_mms = ["emotion", "fasttext_emotion", "cog_dist"]
     height = 1800
     if speaker == PATIENT:
         height = 1500

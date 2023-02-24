@@ -62,7 +62,7 @@ def get_annotation_spans(utterance, response_obj, prefix, threshold):
     ]
     segment_idxs = [
         (
-            emotion.replace("custom_", ""),
+            emotion.replace("fasttext_emotion_", ""),
             utterance.index(_segment),
             utterance.index(_segment) + len(_segment),
             response_obj["micromodels"][emotion]["max_score"],

@@ -17,6 +17,7 @@ from emotions.server.components.analysis import (
     utterance_component,
     annotated_utterance_component,
     micromodel_bar_graph,
+    micromodel_bar_graph_container,
     explanation_graph,
     emotion_table,
 )
@@ -24,13 +25,13 @@ from emotions.server.components import (
     current_search_idx,
 )
 from emotions.server.callbacks import (
-    build_emotion_analysis_component,
-    build_empathy_analysis_component,
+        #build_emotion_analysis_component,
+        #build_empathy_analysis_component,
     build_utterance_component,
     build_micromodel_component,
-    build_explanation_component,
+    #build_explanation_component,
     update_utterance_component,
-    update_global_exp,
+    #update_global_exp,
     handle_hover,
 )
 from emotions.server.utils import entity, get_mm_color
@@ -41,12 +42,14 @@ from emotions.server.utils import entity, get_mm_color
         Output({"type": "popover", "index": ALL}, "is_open"),
         Output({"type": "popover_body", "index": ALL}, "children"),
         Output("dialogue_idx", "data"),
+        Output(micromodel_bar_graph_container, "children"),
     ],
     [
         Input({"type": "dialogue-click", "index": ALL}, "n_clicks"),
         Input("conversation-encoding", "data"),
-        Input("micromodel-results", "hoverData"),
-        Input("global-explanation-feature-dropdown", "value"),
+        #Input("micromodel-results", "hoverData"),
+        Input(micromodel_bar_graph, "hoverData"),
+        #Input("global-explanation-feature-dropdown", "value"),
         Input("utterance-tabs", "active_tab"),
         Input("annotated-utterance-storage", "data"),
     ],
@@ -61,7 +64,7 @@ def analysis_popup(
     n_clicks,
     conversation_encoding,
     hover_data,
-    explanation_dropdown,
+    #explanation_dropdown,
     active_utterance_tab,
     annotated_utterance_storage,
     prev_idx,
@@ -77,9 +80,6 @@ def analysis_popup(
     if triggered_id == "conversation-encoding":
         raise PreventUpdate
 
-    if triggered_id == "global-explanation-feature-dropdown":
-        breakpoint()
-
     if triggered_id in ["utterance-tabs", "micromodel-results"]:
        #return update_utterance_component(
        #    annotated_utterance_storage, active_utterance_tab
@@ -89,6 +89,18 @@ def analysis_popup(
 
     else:
         idx = ctx.triggered_id["index"]
+
+        if idx == prev_idx:
+
+            popover = [{}] * len(is_open)
+            _is_open = [False] * len(is_open)
+            return [
+                _is_open,
+                popover,
+                idx,
+                no_update
+            ]
+
 
 
 
@@ -109,6 +121,8 @@ def analysis_popup(
     )
 
     if triggered_id == "micromodel-results":
+        if hover_data is None:
+            raise PreventUpdate
         data = hover_data["points"][0]
         micromodel = data["label"]
         query = " ".join(word_tokenize(data["customdata"][1]))
@@ -137,20 +151,6 @@ def analysis_popup(
         utterance_encoding["micromodels"], utterance, speaker
     )
 
-    # Emotions - Predictions
-    emotion_classifications = utterance_encoding["emotion"]["predictions"][0][
-        0
-    ]
-
-    # Emotions - Explanations
-    explanation_fig = build_explanation_component(
-        explanation_dropdown, emotion_classifications
-    )
-
-    emotion_analysis_table = build_emotion_analysis_component(
-        utterance_encoding["emotion"]["predictions"], explanation_dropdown
-    )
-
     analysis = html.Div(
         children=[
             html.Div(
@@ -169,8 +169,6 @@ def analysis_popup(
                     ),
                     html.Br(),
                     micromodel_component,
-                    html.Br(),
-                    emotion_analysis_table,
                 ],
                 style={"display": "block"},
             ),
@@ -183,4 +181,5 @@ def analysis_popup(
         _is_open,
         popover,
         idx,
+        micromodel_component
     ]

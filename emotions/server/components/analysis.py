@@ -9,7 +9,7 @@ from emotions.config import EMOTIONS
 
 def get_emotion_mms():
     return ["emotion_%s" % emotion for emotion in EMOTIONS] + [
-        "custom_%s" % emotion for emotion in EMOTIONS
+        "fasttext_emotion_%s" % emotion for emotion in EMOTIONS
     ]
 
 
@@ -36,12 +36,11 @@ utterance_component = dbc.Card(
 )
 
 
-micromodel_bar_graph = html.Div(
-    [dcc.Graph(id="micromodel-results", style={"display": "none"})]
-)
+micromodel_bar_graph = dcc.Graph(id="micromodel-results", style={"display": "none"})
+micromodel_bar_graph_container = html.Div(micromodel_bar_graph)
 micromodel_component = dbc.Card(
     [
-        micromodel_bar_graph,
+        micromodel_bar_graph_container,
         dcc.Store(id="emotion-classification-storage"),
     ]
 )
@@ -88,8 +87,8 @@ analysis = html.Div(
                 utterance_component,
                 html.Br(),
                 micromodel_component,
-                html.Br(),
-                emotion_analysis,
+                #html.Br(),
+                #emotion_analysis,
             ],
             style={"display": "none"},
             id="analysis",

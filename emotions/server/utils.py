@@ -19,6 +19,7 @@ LEGEND_NAMES = {
     "empathy": "Empathy (Micromodels)",
     "epitome": "Empathy (EPITOME)",
     "custom": "Emotions (Custom)",
+    "fasttext_emotion": "Emotions (FastText)",
     "emotion": "Emotions (Empathetic Dialogue)",
     "cog_dist": "Cognitive Distortions",
 }
