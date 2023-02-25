@@ -23,26 +23,26 @@ def get_default_query():
     Default query when dialogue is first loaded.
     """
     miti_queries = [
-        [">=", "miti_%s" % miti_code, 0.8] for miti_code in MITI_CODES
+        [">=", "miti_%s" % miti_code, 0.6] for miti_code in MITI_CODES
     ]
-    miti_queries.append([">=", "pair", 0.8])
+    miti_queries.append([">=", "pair", 0.6])
     miti_queries = (miti_queries, THERAPIST)
 
     emotion_queries = [
-        [">=", "fasttext_emotion_%s" % emotion, 0.8] for emotion in EMOTIONS
+        [">=", "fasttext_emotion_%s" % emotion, 0.6] for emotion in EMOTIONS
     ]
     emotion_queries.extend(
-        [[">=", "emotion_%s" % emotion, 0.8] for emotion in EMOTIONS]
+        [[">=", "emotion_%s" % emotion, 0.6] for emotion in EMOTIONS]
     )
     emotion_queries = (emotion_queries, None)
 
     empathy_queries = [
-        [">=", "empathy_%s" % empathy, 0.8]
+        [">=", "empathy_%s" % empathy, 0.6]
         for empathy in EMPATHY_COMMUNICATION_MECHANISMS
     ]
     empathy_queries.extend(
         [
-            [">=", "epitome_%s" % empathy, 0.8]
+            [">=", "epitome_%s" % empathy, 0.6]
             for empathy in EMPATHY_COMMUNICATION_MECHANISMS
         ]
     )
@@ -53,11 +53,11 @@ def get_default_query():
         "emotions": emotion_queries,
         "empathy": empathy_queries,
         "phq9": (
-            [[">=", "phq9_%s" % phq9, 0.8] for phq9 in PHQ9],
+            [[">=", "phq9_%s" % phq9, 0.6] for phq9 in PHQ9],
             PATIENT,
         ),
         "other": (
-            [[">=", "other_%s" % behavior, 0.8] for behavior in OTHER],
+            [[">=", "other_%s" % behavior, 0.6] for behavior in OTHER],
             PATIENT,
         )
     }
