@@ -107,7 +107,7 @@ def textbox(text, box, idx, component_id):
     )
 
 
-def textbox_popover(text, box, idx, component_id):
+def textbox_popover(text, box, idx, component_id, analysis):
     """
     Textbox component.
     """
@@ -149,7 +149,7 @@ def textbox_popover(text, box, idx, component_id):
             ),
             dbc.Popover(
                 dbc.PopoverBody(
-                    f"Hmm, init", id={"type": "popover_body", "index": idx}
+                    analysis, id={"type": "popover_body", "index": idx}
                 ),
                 id={"type": "popover", "index": idx},
                 is_open=False,

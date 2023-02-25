@@ -19,8 +19,9 @@ from emotions.config import (
     EMP_CONFIGS,
     EMPATHY_COMMUNICATION_MECHANISMS,
     EMP_MMS,
-    COG_DISTS,
-    EMOTIONS
+    PHQ9,
+    OTHER,
+    EMOTIONS,
 )
 from emotions.server.backend.BertFeaturizer import BertFeaturizer
 from emotions.server.backend.data_utils import (
@@ -189,7 +190,7 @@ class Encoder:
         print("Adding MITI Micromodels...")
         self._add_miti_mms()
         print("Adding Cognitive Distortion Micromodels...")
-        self._add_cog_dist_mms()
+        self._add_phq9_mms()
         print("Initializing Featurizer...")
         self._init_featurizer()
 
@@ -268,7 +269,7 @@ class Encoder:
 
     def _add_ed_mms(self):
         """Add micromodels for EmpatheticDialogue"""
-        #for emotion, seed in ED_SEEDS.items():
+        # for emotion, seed in ED_SEEDS.items():
         #    if len(seed) < 1:
         #        continue
         #    config = {
@@ -313,11 +314,11 @@ class Encoder:
             }
             self.mm_configs.append(config)
 
-    def _add_cog_dist_mms(self):
+    def _add_phq9_mms(self):
         """
         Add cognitive distortions / PHQ-9 responses
         """
-        for cog_dist, seed in COG_DISTS.items():
+        for phq9, seed in PHQ9.items():
             setup_args = {
                 "threshold": 0.75,
                 "infer_config": {
@@ -326,11 +327,28 @@ class Encoder:
                 "seed": seed,
             }
             config = {
-                "name": "cog_dist_%s" % cog_dist,
+                "name": "phq9_%s" % phq9,
                 "model_type": "bert_query",
                 "setup_args": setup_args,
                 "model_path": os.path.join(
-                    MM_HOME, "models/cog_dist_%s" % cog_dist
+                    MM_HOME, "models/cog_dist_%s" % phq9
+                ),
+            }
+            self.mm_configs.append(config)
+        for behav, seed in OTHER.items():
+            setup_args = {
+                "threshold": 0.6,
+                "infer_config": {
+                    "segment_config": {"window_size": 10, "step_size": 4}
+                },
+                "seed": seed,
+            }
+            config = {
+                "name": "other_%s" % behav,
+                "model_type": "bert_query",
+                "setup_args": setup_args,
+                "model_path": os.path.join(
+                    MM_HOME, "models/cog_dist_%s" % behav
                 ),
             }
             self.mm_configs.append(config)
@@ -406,8 +424,9 @@ class Encoder:
             )
 
         num_emotions = len(self.ed_fasttext.labels)
+        _queries = [query.replace("\n", " ") for query in queries]
         predictions, probabilities = self.ed_fasttext.predict(
-            queries, k=num_emotions
+            _queries, k=num_emotions
         )
 
         results = []
@@ -803,10 +822,10 @@ def main():
     )
 
     encoder = load_encoder(
-        #ed_path=ed_classifier,
-        #emp_er_path=emp_er_classifier,
-        #emp_exp_path=emp_exp_classifier,
-        #emp_int_path=emp_int_classifier,
+        # ed_path=ed_classifier,
+        # emp_er_path=emp_er_classifier,
+        # emp_exp_path=emp_exp_classifier,
+        # emp_int_path=emp_int_classifier,
         epitome_er_path=epitome_er_classifier,
         epitome_exp_path=epitome_exp_classifier,
         epitome_int_path=epitome_int_classifier,
@@ -819,7 +838,7 @@ def main():
     response = "You almost got into a car accident."
 
     breakpoint()
-    #testing2 = encoder.encode(prompt, response)
+    # testing2 = encoder.encode(prompt, response)
 
     testing3 = encoder.encode_convo(
         [

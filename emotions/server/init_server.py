@@ -21,7 +21,13 @@ from emotions.server.components import (
     search_bar_component,
 )
 
-from emotions.server.components.summary import miti_query_idxs, emotions_query_idxs, empathy_query_idxs, cog_dist_query_idxs
+from emotions.server.components.summary import (
+    miti_query_idxs,
+    emotions_query_idxs,
+    empathy_query_idxs,
+    phq9_query_idxs,
+    other_query_idxs,
+)
 from emotions.constants import FEATURIZER_SERVER
 from emotions.server.cache_utils import load_cache
 
@@ -63,15 +69,14 @@ except RuntimeError:
     sys.exit()
 
 
-#EMOTION_EXPL = init_explanation(FEATURIZER_SERVER)
+# EMOTION_EXPL = init_explanation(FEATURIZER_SERVER)
 cache_filepath = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)),
-    "cache.json"
+    os.path.dirname(os.path.realpath(__file__)), "cache.json"
 )
-#CACHE = load_cache(cache_filepath)
+# CACHE = load_cache(cache_filepath)
 CACHE = {}
 
-#app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
+# app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = dbc.Container(
     [
@@ -86,7 +91,8 @@ app.layout = dbc.Container(
                         dbc.Row(summary),
                         dbc.Row(search_result_component),
                     ],
-                    width=6)
+                    width=6,
+                ),
             ]
         ),
         dbc.Row([dbc.Col(analysis, width=12)]),
@@ -94,8 +100,8 @@ app.layout = dbc.Container(
         miti_query_idxs,
         emotions_query_idxs,
         empathy_query_idxs,
-        cog_dist_query_idxs,
-
+        phq9_query_idxs,
+        other_query_idxs,
     ],
     fluid=True,
 )

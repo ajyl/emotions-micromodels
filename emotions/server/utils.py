@@ -21,7 +21,8 @@ LEGEND_NAMES = {
     "custom": "Emotions (Custom)",
     "fasttext_emotion": "Emotions (FastText)",
     "emotion": "Emotions (Empathetic Dialogue)",
-    "cog_dist": "Cognitive Distortions",
+    "phq9": "PHQ-9",
+    "other": "Other",
 }
 
 

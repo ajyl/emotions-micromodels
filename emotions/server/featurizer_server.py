@@ -44,7 +44,7 @@ encoder = load_encoder(
     epitome_int_path=epitome_int_classifier,
     pair_path=pair_path,
     ed_fasttext_path=fasttext_path,
-    device="cuda",
+    device="cpu",
 )
 
 
@@ -81,8 +81,7 @@ def init_cache(cache_filepath, force_rebuild=False):
     return cache
 
 
-#cache = init_cache(cache_filepath, False)
-cache = {}
+cache = init_cache(cache_filepath, False)
 
 app = Flask(__name__)
 

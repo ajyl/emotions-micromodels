@@ -24,7 +24,8 @@ MM_TYPES = [
     "epitome",
     "fasttext_emotion",
     "emotion",
-    "cog_dist",
+    "phq9",
+    "other",
 ]
 
 MITI_CODES = [x.lower() for x in MITI_SEEDS.keys()]
@@ -82,15 +83,18 @@ EMOTIONS = [
 
 
 
-COG_DISTS = {
+PHQ9 = {
     "anxious": ANXIOUS,
     "apathy": APATHY,
     "depressed": DEPRESSED,
-    "labeling": LABELING,
-    "scared": SCARED,
-    "self_blame": SELF_BLAME,
-    "substance_abuse": SUBSTANCE_ABUSE,
     "suicidal": SUICIDAL,
+}
+
+OTHER = {
+    "scared": SCARED,
+    "labeling": LABELING,
+    "substance_abuse": SUBSTANCE_ABUSE,
+    "self_blame": SELF_BLAME,
 }
 
 
@@ -179,7 +183,7 @@ def add_cog_dists(configs):
     """
     Add cognitive distortions / PHQ-9 responses
     """
-    for cog_dist, seed in COG_DISTS.items():
+    for phq9, seed in PHQ9.items():
         setup_args = {
             "threshold": 0.6,
             "infer_config": {
@@ -188,13 +192,30 @@ def add_cog_dists(configs):
             "seed": seed,
         }
         config = {
-            "name": "cog_dist_%s" % cog_dist,
+            "name": "phq9_%s" % phq9,
             "model_type": "bert_query",
             "setup_args": setup_args,
-            "model_path": os.path.join(mm_model_dir, "cog_dist_%s" % cog_dist),
+            "model_path": os.path.join(mm_model_dir, "cog_dist_%s" % phq9),
             "build": BUILD_COG_DIST_MMS,
         }
         configs.append(config)
+    for behav, seed in OTHER.items():
+        setup_args = {
+            "threshold": 0.6,
+            "infer_config": {
+                "segment_config": {"window_size": 10, "step_size": 4}
+            },
+            "seed": seed,
+        }
+        config = {
+            "name": "other_%s" % behav,
+            "model_type": "bert_query",
+            "setup_args": setup_args,
+            "model_path": os.path.join(mm_model_dir, "cog_dist_%s" % behav),
+            "build": BUILD_COG_DIST_MMS,
+        }
+        configs.append(config)
+
 
 
 # EMPATHY

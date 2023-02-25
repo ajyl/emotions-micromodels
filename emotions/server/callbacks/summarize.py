@@ -6,11 +6,12 @@ from dash import callback, Input, Output, State, ALL, ctx, no_update, html
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 
-from emotions.server.components import summary as summary_component
-from emotions.server.backend.search import evaluate
+from emotions.server.components import search_bar, summary as summary_component
+from emotions.server.backend.search import evaluate, parse_query
 from emotions.config import (
     EMOTIONS,
-    COG_DISTS,
+    PHQ9,
+    OTHER,
     EMPATHY_COMMUNICATION_MECHANISMS,
     MITI_CODES,
 )
@@ -51,10 +52,14 @@ def get_default_query():
         "miti": miti_queries,
         "emotions": emotion_queries,
         "empathy": empathy_queries,
-        "cog_dist": (
-            [[">=", "cog_dist_%s" % cog_dist, 0.8] for cog_dist in COG_DISTS],
+        "phq9": (
+            [[">=", "phq9_%s" % phq9, 0.8] for phq9 in PHQ9],
             PATIENT,
         ),
+        "other": (
+            [[">=", "other_%s" % behavior, 0.8] for behavior in OTHER],
+            PATIENT,
+        )
     }
     return queries
 
@@ -65,7 +70,8 @@ def get_default_query():
         Output("miti-summary-idxs", "data"),
         Output("emotions-summary-idxs", "data"),
         Output("empathy-summary-idxs", "data"),
-        Output("cog-dist-summary-idxs", "data"),
+        Output("phq9-summary-idxs", "data"),
+        Output("other-summary-idxs", "data"),
     ],
     [Input("conversation-encoding", "data")],
 )
@@ -94,7 +100,8 @@ def summarize(mm_data):
         # )
         summary_str_map = {
             "miti": "MITI codes",
-            "cog_dist": "cognitive distortions",
+            "phq9": "PHQ9 behaviors",
+            "other": "other mental-health related behaviors"
         }
         summary = "%d out of %d utterances " % (
             len(results[mm_type]),
@@ -134,7 +141,8 @@ def summarize(mm_data):
         results["miti"],
         results["emotions"],
         results["empathy"],
-        results["cog_dist"],
+        results["phq9"],
+        results["other"],
     )
 
 
@@ -144,13 +152,17 @@ def summarize(mm_data):
         Input({"type": "miti", "index": ALL}, "n_clicks"),
         Input({"type": "emotions", "index": ALL}, "n_clicks"),
         Input({"type": "empathy", "index": ALL}, "n_clicks"),
-        Input({"type": "cog_dist", "index": ALL}, "n_clicks"),
+        Input({"type": "phq9", "index": ALL}, "n_clicks"),
+        Input({"type": "other", "index": ALL}, "n_clicks"),
+        Input(search_bar, "value"),
+        Input("conversation-encoding", "data"),
     ],
     [
         State("miti-summary-idxs", "data"),
         State("emotions-summary-idxs", "data"),
         State("empathy-summary-idxs", "data"),
-        State("cog-dist-summary-idxs", "data"),
+        State("phq9-summary-idxs", "data"),
+        State("other-summary-idxs", "data"),
         State({"type": "dialogue-textbox-card", "index": ALL}, "style"),
     ],
     prevent_initial_call=True,
@@ -159,11 +171,15 @@ def query_summary(
     miti_clicks,
     emotions_clicks,
     empathy_clicks,
-    cog_dist_clicks,
+    phq9_clicks,
+    other_clicks,
+    query,
+    mm_data,
     miti_idxs,
     emotions_idxs,
     empathy_idxs,
-    cog_dist_idxs,
+    phq9_idxs,
+    other_idxs,
     styles,
 ):
     _sum = sum(
@@ -172,23 +188,36 @@ def query_summary(
             for x in miti_clicks
             + emotions_clicks
             + empathy_clicks
-            + cog_dist_clicks
+            + phq9_clicks
+            + other_clicks
             if x is not None
         ]
     )
-    if _sum <= 0:
+    if _sum <= 0 and (query is None or len(query) < 1):
         raise PreventUpdate
-    triggered_id = ctx.triggered_id
-    print(triggered_id)
 
-    if triggered_id["type"] == "miti":
-        query_idxs = miti_idxs
-    elif triggered_id["type"] == "emotions":
-        query_idxs = emotions_idxs
-    elif triggered_id["type"] == "empathy":
-        query_idxs = empathy_idxs
-    elif triggered_id["type"] == "cog-dist":
-        query_idxs = cog_dist_idxs
+    triggered_id = ctx.triggered_id
+
+    if triggered_id == "conversation-encoding":
+        raise PreventUpdate
+
+    query_idxs = []
+    if triggered_id == "search_bar":
+        parsed_query = parse_query(query)
+        query_idxs = evaluate(parsed_query, mm_data)
+
+    else:
+
+        if triggered_id["type"] == "miti":
+            query_idxs = miti_idxs
+        elif triggered_id["type"] == "emotions":
+            query_idxs = emotions_idxs
+        elif triggered_id["type"] == "empathy":
+            query_idxs = empathy_idxs
+        elif triggered_id["type"] == "phq9":
+            query_idxs = phq9_idxs
+        elif triggered_id["type"] == "other":
+            query_idxs = other_idxs
 
     for _idx in range(len(styles)):
         styles[_idx]["opacity"] = 1

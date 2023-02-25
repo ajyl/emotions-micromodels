@@ -19,7 +19,7 @@ from emotions.constants import (
 )
 
 
-def build_utterance_tab_component(speaker, active_tab):
+def build_utterance_tab_component(speaker, active_tab, idx):
     """
     Build utterance_tab component.
     """
@@ -30,35 +30,37 @@ def build_utterance_tab_component(speaker, active_tab):
                 dbc.Tab(label="Emotions", tab_id="utterance-tab-2"),
                 dbc.Tab(label="Empathy", tab_id="utterance-tab-3"),
             ],
-            id="utterance-tabs",
+            id={"type": "utterance-tabs", "index": idx},
             active_tab=active_tab,
         )
 
     return dbc.Tabs(
         [
             dbc.Tab(label="Emotions", tab_id="utterance-tab-2"),
-            dbc.Tab(label="Cognitive Distortions", tab_id="utterance-tab-4"),
+            dbc.Tab(label="PHQ9", tab_id="utterance-tab-4"),
+            dbc.Tab(label="Other", tab_id="utterance-tab-5"),
         ],
-        id="utterance-tabs",
+        id={"type": "utterance-tabs", "index": idx},
         active_tab="utterance-tab-2",
     )
 
 
 def _build_utterance_component(
-    response_obj, speaker, utterance, active_tab=None, mm_type=None
+    response_obj, speaker, utterance, idx, active_tab=None, mm_type=None
 ):
     """
     Build utterance component.
     """
     if active_tab is None:
+        print("active_tab is None!!!")
         active_tab = (
             "utterance-tab-1" if speaker == THERAPIST else "utterance-tab-2"
         )
 
     if mm_type is None:
-        mm_type = "miti" if speaker == THERAPIST else "cog_dist"
+        mm_type = "miti" if speaker == THERAPIST else "phq9"
 
-    tab_component = build_utterance_tab_component(speaker, active_tab)
+    tab_component = build_utterance_tab_component(speaker, active_tab, idx)
     formatted_speaker = speaker[0].upper() + speaker[1:] + ":"
 
     utterance = " ".join(word_tokenize(utterance))
@@ -73,8 +75,11 @@ def _build_utterance_component(
         "empathy": get_annotation_spans(
             utterance, response_obj, "empathy_", EMPATHY_THRESHOLD
         ),
-        "cog_dist": get_annotation_spans(
-            utterance, response_obj, "cog_dist_", COG_DIST_THRESHOLD
+        "phq9": get_annotation_spans(
+            utterance, response_obj, "phq9", COG_DIST_THRESHOLD
+        ),
+        "other": get_annotation_spans(
+            utterance, response_obj, "other", COG_DIST_THRESHOLD
         ),
     }
     annotated_utterance = annotate_utterance(utterance_annotation_obj, mm_type)
@@ -87,7 +92,7 @@ def _build_utterance_component(
     )
 
 
-def build_utterance_component(utterance_obj, utterance_encoding, active_tab):
+def build_utterance_component(utterance_obj, utterance_encoding, active_tab, idx):
     """
     Build utterance components.
     """
@@ -97,7 +102,8 @@ def build_utterance_component(utterance_obj, utterance_encoding, active_tab):
         "utterance-tab-1": "miti",
         "utterance-tab-2": "emotion",
         "utterance-tab-3": "empathy",
-        "utterance-tab-4": "cog_dist",
+        "utterance-tab-4": "phq9",
+        "utterance-tab-4": "other",
     }[active_tab]
 
     (
@@ -109,6 +115,7 @@ def build_utterance_component(utterance_obj, utterance_encoding, active_tab):
         utterance_encoding,
         speaker,
         utterance,
+        idx,
         active_tab=active_tab,
         mm_type=mm_type,
     )
@@ -162,7 +169,8 @@ def update_utterance_component(annotation_obj, tab_id):
         "utterance-tab-1": "miti",
         "utterance-tab-2": "emotion",
         "utterance-tab-3": "empathy",
-        "utterance-tab-4": "cog_dist",
+        "utterance-tab-4": "phq9",
+        "utterance-tab-5": "other",
     }[tab_id]
 
     return [

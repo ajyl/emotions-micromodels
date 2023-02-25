@@ -14,12 +14,12 @@ from emotions.server.utils import (
 from emotions.constants import PATIENT
 
 
-def build_micromodel_component(micromodel_results, utterance, speaker):
+def build_micromodel_component(micromodel_results, utterance, speaker, idx):
     """
     Return bar graph.
     micromodel_results: response_obj["micromodels"]
     """
-    client_mms = ["emotion", "fasttext_emotion", "cog_dist"]
+    client_mms = ["emotion", "fasttext_emotion", "phq9", "other"]
     height = 1800
     if speaker == PATIENT:
         height = 1500
@@ -85,7 +85,7 @@ def build_micromodel_component(micromodel_results, utterance, speaker):
     micromodel_fig.for_each_trace(lambda t: t.update(name=get_legend_name(t)))
 
     return dcc.Graph(
-        id="micromodel-results",
+        id={"type": "micromodel-results", "index": idx},
         figure=micromodel_fig,
         style={"display": "block"},
     )

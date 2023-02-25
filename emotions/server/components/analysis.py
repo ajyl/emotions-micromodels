@@ -13,30 +13,33 @@ def get_emotion_mms():
     ]
 
 
-utterance_tabs = dbc.CardHeader(
-    dbc.Tabs(
-        [
-            dbc.Tab(label="MITI Codes", tab_id="utterance-tab-1"),
-            dbc.Tab(label="Emotions", tab_id="utterance-tab-2"),
-            dbc.Tab(label="Empathy", tab_id="utterance-tab-3"),
-        ],
-        id="utterance-tabs",
-        active_tab="utterance-tab-1",
-    ),
+utterance_tabs = dbc.Tabs(
+    [
+        dbc.Tab(label="MITI Codes", tab_id="utterance-tab-1"),
+        dbc.Tab(label="Emotions", tab_id="utterance-tab-2"),
+        dbc.Tab(label="Empathy", tab_id="utterance-tab-3"),
+    ],
+    id="utterance-tabs",
+    active_tab="utterance-tab-1",
 )
+
+utterance_tabs_card = dbc.CardHeader(utterance_tabs)
 
 annotated_utterance_component = html.Div()
 utterance_component = dbc.Card(
     [
-        utterance_tabs,
+        utterance_tabs_card,
         dbc.CardBody(
             [annotated_utterance_component],
         ),
     ]
 )
+utterance_component_container = html.Div(utterance_component)
 
 
-micromodel_bar_graph = dcc.Graph(id="micromodel-results", style={"display": "none"})
+micromodel_bar_graph = dcc.Graph(
+    id="micromodel-results", style={"display": "none"}
+)
 micromodel_bar_graph_container = html.Div(micromodel_bar_graph)
 micromodel_component = dbc.Card(
     [
@@ -84,11 +87,11 @@ analysis = html.Div(
         html.Div(
             [
                 dcc.Store(id="annotated-utterance-storage"),
-                utterance_component,
+                utterance_component_container,
                 html.Br(),
                 micromodel_component,
-                #html.Br(),
-                #emotion_analysis,
+                # html.Br(),
+                # emotion_analysis,
             ],
             style={"display": "none"},
             id="analysis",
